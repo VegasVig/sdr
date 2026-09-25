@@ -33,7 +33,6 @@
       </label>
       <p id="loginError" class="login-error" role="alert"></p>
       <button class="btn btn-primary btn-block" type="submit">Entrar</button>
-      <p class="login-hint">Primeiro acesso: <b>admin</b> / <b>vegas2026</b> — troque em Configurações.</p>
     </form>
   </section>
 
@@ -68,6 +67,7 @@
           <div id="searchResults" class="search-results glass" hidden></div>
         </div>
         <div class="topbar-right">
+          <span id="syncChip" class="sync-chip" hidden></span>
           <div class="clock hide-mobile">
             <span id="clockDate"></span>
             <b id="clockTime"></b>
@@ -123,6 +123,7 @@
   <script src="assets/vendor/jspdf.umd.min.js"></script>
   <script src="assets/vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="assets/logo-data.js"></script>
+  <script src="config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

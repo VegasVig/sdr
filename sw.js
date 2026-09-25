@@ -1,6 +1,10 @@
-const CACHE = 'sdr-control-v1';
+/* SDR Control — service worker
+   Sempre busca a versão mais nova no servidor (GitHub) e usa a cópia salva
+   só quando estiver sem internet. O banco de dados (Apps Script) nunca é
+   guardado aqui: os dados sempre vêm do servidor. */
+const CACHE = 'sdr-control-v2';
 const SHELL = [
-  './', './index.html', './style.css', './script.js', './manifest.json',
+  './', './index.html', './style.css', './script.js', './config.js', './manifest.json',
   './assets/logo.png', './assets/logo-dark.png', './assets/logo-data.js',
   './assets/vendor/jspdf.umd.min.js', './assets/vendor/jspdf.plugin.autotable.min.js',
   './assets/icons/icon-192.png', './assets/icons/icon-512.png'
@@ -11,10 +15,10 @@ self.addEventListener('activate', e => e.waitUntil(
 ));
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-    if (res.ok && new URL(e.request.url).origin === location.origin) {
-      const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
-    }
+  const url = new URL(e.request.url);
+  if (url.origin !== location.origin) return; // fontes, ViaCEP e Apps Script vão direto para a internet
+  e.respondWith(fetch(e.request).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
     return res;
-  }).catch(() => caches.match('./index.html'))));
+  }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html'))));
 });

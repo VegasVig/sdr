@@ -1,7 +1,7 @@
 /* =========================================================
    SDR CONTROL — Vegas Vigilância e Segurança
    1. Constantes   2. Utilitários   3. Dados (adapter + DB)
-   4. Auth         5. Regras de negócio   6. Demo
+   4. Auth         5. Regras de negócio   6. Sincronização
    7. UI base      8. Views          9. Formulários/modais
    10. WhatsApp    11. PDF/CSV       12. Notificações  13. Boot
    ========================================================= */
@@ -63,8 +63,7 @@ const DEFAULT_CONFIG = {
     orcamento: 'Olá {nome}! Segue o orçamento nº {numero} da Vegas Vigilância e Segurança, no valor de {total}. Qualquer dúvida estou à disposição.',
     reagendar: 'Olá {nome}! Precisamos reagendar a visita marcada para {data} às {hora}. Qual o melhor dia e horário para você?',
     obrigado:  'Olá {nome}! Obrigado pelo contato com a Vegas Vigilância e Segurança. Em breve retornamos com os próximos passos.'
-  },
-  demoSeeded: false
+  }
 };
 const TPL_LABEL = { confirmar: 'Confirmar visita', orcamento: 'Enviar orçamento', reagendar: 'Reagendar visita', obrigado: 'Obrigado pelo contato' };
 
@@ -111,70 +110,202 @@ function downloadBlob(blob, name) {
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 /* ---------- 3. DADOS ----------
-   Toda leitura/escrita passa por Adapter. Para migrar para Supabase/Firebase,
-   reescreva apenas Adapter.load/save (a UI lê do cache em memória do DB). */
+   Banco central: Google Apps Script + Planilha Google (endereço em config.js).
+   A tela lê do cache em memória (DB.cache) e cada alteração entra numa fila
+   que é enviada ao servidor em lotes. A fila fica salva no aparelho: se a
+   internet cair, nada se perde e o envio é refeito quando a conexão voltar. */
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(PREFIX + k); return v ? JSON.parse(v) : def; } catch { return def; } },
-  set(k, v) { localStorage.setItem(PREFIX + k, JSON.stringify(v)); },
-  del(k) { localStorage.removeItem(PREFIX + k); }
+  set(k, v) { try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch { /* armazenamento local cheio */ } },
+  del(k) { try { localStorage.removeItem(PREFIX + k); } catch { } }
 };
 
-const Adapter = {
-  async load(col) { return Store.get(col, []); },
-  async save(col, rows) {
-    try { Store.set(col, rows); }
-    catch { toast('Armazenamento do navegador cheio. Exporte um backup e limpe dados antigos.', 'err'); }
+const API_URL = String((window.SDR_CONFIG && window.SDR_CONFIG.API_URL) || '').trim();
+const apiConfigurada = () => /^https:\/\/script\.google\.com\/.+\/exec$/.test(API_URL);
+
+class ErroSessao extends Error {}
+class ErroRede extends Error {}
+
+async function api(action, payload = {}) {
+  if (!apiConfigurada()) throw new Error('Banco de dados não configurado (config.js).');
+  const s = Store.get('session', null);
+  const req = { action, ...(s && s.token ? { token: s.token } : {}), ...payload };
+  let txt;
+  try {
+    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(req), redirect: 'follow' });
+    txt = await r.text();
+  } catch { throw new ErroRede('Sem conexão com o banco de dados.'); }
+  let j;
+  try { j = JSON.parse(txt); } catch { throw new Error('O banco de dados não respondeu corretamente. Confira se o Apps Script está publicado para "Qualquer pessoa".'); }
+  if (j.ok) return j.data;
+  const msg = String(j.erro || 'Erro no banco de dados.');
+  if (msg.startsWith('SESSAO:')) throw new ErroSessao(msg.replace('SESSAO:', '').trim());
+  throw new Error(msg);
+}
+
+const Sync = {
+  fila: Store.get('fila', []),
+  enviando: false,
+  timer: null,
+  erroRede: false,
+  chave: op => op.col + ':' + (op.row ? op.row.id : op.id),
+  push(op) {
+    const k = this.chave(op);
+    this.fila = this.fila.filter(o => this.chave(o) !== k || o.enviando);
+    this.fila.push(op);
+    this.salvarFila(); this.agendar(400);
+  },
+  salvarFila() { Store.set('fila', this.fila.map(o => ({ op: o.op, col: o.col, id: o.id, row: o.row }))); this.indicador(); },
+  agendar(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => this.enviar(), ms); },
+  async enviar() {
+    if (this.enviando || !this.fila.length || !ME) return;
+    this.enviando = true; this.indicador();
+    const lote = this.fila.slice(0, 150);
+    lote.forEach(o => (o.enviando = true));
+    try {
+      const r = await api('batch', { ops: lote.map(o => ({ op: o.op, col: o.col, id: o.id, row: o.row })) });
+      this.fila = this.fila.filter(o => !lote.includes(o));
+      this.erroRede = false;
+      aplicarSalvos(r);
+    } catch (e) {
+      lote.forEach(o => delete o.enviando);
+      if (e instanceof ErroRede) { this.erroRede = true; this.agendar(15000); }
+      else if (e instanceof ErroSessao) { sessaoExpirada(e.message); }
+      else {
+        // o servidor recusou (ex.: sem permissão): descarta e recarrega os dados verdadeiros
+        this.fila = this.fila.filter(o => !lote.includes(o));
+        toast('Não foi possível salvar: ' + e.message, 'err');
+        sincronizar(true);
+      }
+    } finally {
+      this.enviando = false; this.salvarFila();
+      if (this.fila.length && !this.erroRede) this.agendar(200);
+    }
+  },
+  pendentes() { return this.fila.length; },
+  indicador() {
+    const el = $('#syncChip'); if (!el) return;
+    const n = this.fila.length;
+    el.hidden = !n && !this.erroRede;
+    el.className = 'sync-chip' + (this.erroRede ? ' off' : '');
+    el.textContent = this.erroRede ? `Sem conexão · ${n} pendente${n > 1 ? 's' : ''}` : 'Salvando…';
   }
 };
+window.addEventListener('online', () => { Sync.erroRede = false; Sync.agendar(300); });
+window.addEventListener('beforeunload', e => { if (Sync.fila.length && !Sync.erroRede) { e.preventDefault(); e.returnValue = ''; } });
+
+/** Resposta do servidor: número definitivo do orçamento, usuário sem senha, histórico mesclado */
+function aplicarSalvos(r) {
+  if (!r) return;
+  (r.salvos || []).forEach(({ col, row }) => {
+    const local = DB.get(col, row.id);
+    if (!local) return;
+    const pendente = Sync.fila.some(o => Sync.chave(o) === col + ':' + row.id);
+    if (col === 'orcamentos' && +local.numero !== +row.numero) {
+      toast(`Outro orçamento já tinha o nº ${numOrc(local.numero)}. Este ficou com o nº ${numOrc(row.numero)}.`, 'info');
+      local.numero = row.numero;
+    }
+    if (col === 'usuarios') { delete local.senhaNova; delete local.senha; }
+    if (col === 'clientes' && !pendente) local.historico = row.historico;
+  });
+  if (r.proxNumero) CONFIG.proxNumero = Math.max(CONFIG.proxNumero, r.proxNumero);
+}
 
 const DB = {
   cache: {},
-  async init() { for (const c of COLLECTIONS) this.cache[c] = await Adapter.load(c); },
+  /** Carrega os dados recebidos do servidor mantendo o que ainda não foi enviado */
+  load(snap) {
+    for (const c of COLLECTIONS) this.cache[c] = Array.isArray(snap[c]) ? snap[c] : [];
+    for (const o of Sync.fila) {
+      const arr = this.cache[o.col]; if (!arr) continue;
+      if (o.op === 'remove') this.cache[o.col] = arr.filter(x => x.id !== o.id);
+      else { const i = arr.findIndex(x => x.id === o.row.id); if (i >= 0) arr[i] = o.row; else arr.push(o.row); }
+    }
+  },
   all(col) { return this.cache[col] || []; },
   get(col, id) { return this.all(col).find(x => x.id === id); },
   insert(col, obj) {
     const row = { id: uid(), criadoEm: nowLocal(), ...obj };
-    this.cache[col].push(row); Adapter.save(col, this.cache[col]); return row;
+    this.cache[col].push(row); Sync.push({ op: 'upsert', col, row }); return row;
   },
   update(col, id, patch) {
     const row = this.get(col, id); if (!row) return null;
     Object.assign(row, patch, { atualizadoEm: nowLocal() });
-    Adapter.save(col, this.cache[col]); return row;
+    Sync.push({ op: 'upsert', col, row }); return row;
   },
-  remove(col, id) { this.cache[col] = this.all(col).filter(x => x.id !== id); Adapter.save(col, this.cache[col]); },
-  replace(col, rows) { this.cache[col] = rows; Adapter.save(col, rows); }
+  remove(col, id) { this.cache[col] = this.all(col).filter(x => x.id !== id); Sync.push({ op: 'remove', col, id }); },
+  /** Só na memória (ex.: limitar a lista de notificações exibidas) */
+  replace(col, rows) { this.cache[col] = rows; }
 };
 
 let CONFIG = structuredClone(DEFAULT_CONFIG);
-const loadConfig = () => {
-  const c = Store.get('config', {});
+const loadConfig = (c = {}) => {
   CONFIG = { ...structuredClone(DEFAULT_CONFIG), ...c, empresa: { ...DEFAULT_CONFIG.empresa, ...(c.empresa || {}) }, templates: { ...DEFAULT_CONFIG.templates, ...(c.templates || {}) } };
+  if (!Array.isArray(CONFIG.sdrs) || !CONFIG.sdrs.length) CONFIG.sdrs = structuredClone(DEFAULT_CONFIG.sdrs);
 };
-const saveConfig = () => Store.set('config', CONFIG);
+let _cfgTimer = null;
+/** Configurações são do administrador; para SDR o nº do orçamento é controlado pelo servidor */
+const saveConfig = () => {
+  if (!isAdmin()) return;
+  clearTimeout(_cfgTimer);
+  _cfgTimer = setTimeout(() => api('setConfig', { config: CONFIG }).then(c => { CONFIG.proxNumero = c.proxNumero; }).catch(e => toast('Configurações não salvas: ' + e.message, 'err')), 500);
+};
 
-/* ---------- 4. AUTENTICAÇÃO (visual/local — não é segurança de servidor) ---------- */
+function aplicarSnapshot(snap) {
+  DB.load(snap);
+  loadConfig(snap.config || {});
+  ui.rev = snap.rev;
+  if (ME) Store.set('cache_' + ME.id, snap);
+}
+
+/** Busca novidades (outra SDR cadastrou, admin alterou) a cada 25 s */
+async function sincronizar(forcar) {
+  if (!ME) return;
+  if (!forcar) {
+    if (document.hidden || Sync.fila.length || !$('#modal').hidden) return;
+    const a = document.activeElement;
+    if (a && a.matches && a.matches('input, textarea, select')) return;
+  }
+  try {
+    const rev = await api('rev');
+    if (rev === ui.rev && !forcar) return;
+    const r = await api('bootstrap');
+    ME = r.usuario; Store.set('me', ME);
+    aplicarSnapshot(r.snapshot);
+    if (!$('#app').hidden && $('#modal').hidden) refresh();
+  } catch (e) {
+    if (e instanceof ErroSessao) sessaoExpirada(e.message);
+  }
+}
+
+/* ---------- 4. AUTENTICAÇÃO (conferida no servidor) ---------- */
 let ME = null;
 const SESSION_HOURS = 12;
 
-function ensureUsers() {
-  if (DB.all('usuarios').length) return;
-  DB.insert('usuarios', { nome: 'Administrador', usuario: 'admin', senha: hash('vegas2026'), perfil: 'admin', sdr: '' });
-  DB.insert('usuarios', { nome: 'Maria Izabel', usuario: 'maria', senha: hash('maria123'), perfil: 'sdr', sdr: 'Maria Izabel' });
-  DB.insert('usuarios', { nome: 'Daiana', usuario: 'daiana', senha: hash('daiana123'), perfil: 'sdr', sdr: 'Daiana' });
-  DB.insert('usuarios', { nome: 'Regiane', usuario: 'regiane', senha: hash('regiane123'), perfil: 'sdr', sdr: 'Regiane' });
-}
-function login(usuario, senha) {
-  const u = DB.all('usuarios').find(x => x.usuario.toLowerCase() === usuario.trim().toLowerCase() && x.senha === hash(senha));
-  if (!u) return false;
-  Store.set('session', { uid: u.id, exp: Date.now() + SESSION_HOURS * 3600e3 });
-  ME = u; return true;
+async function login(usuario, senha) {
+  const r = await api('login', { usuario: usuario.trim(), senha });
+  Store.set('session', { token: r.token, exp: Date.now() + SESSION_HOURS * 3600e3 });
+  ME = r.usuario; Store.set('me', ME);
+  aplicarSnapshot(r.snapshot);
+  return true;
 }
 function currentUser() {
   const s = Store.get('session', null);
   if (!s || s.exp < Date.now()) { Store.del('session'); return null; }
-  return DB.get('usuarios', s.uid) || null;
+  return Store.get('me', null);
 }
-function logout() { Store.del('session'); ME = null; location.hash = ''; location.reload(); }
+function limparSessao() { Store.del('session'); Store.del('me'); }
+function logout() {
+  if (Sync.fila.length && !confirm('Ainda há alterações sem enviar (sem internet). Se sair agora, elas serão perdidas. Sair mesmo assim?')) return;
+  api('logout').catch(() => {});
+  if (ME) Store.del('cache_' + ME.id);
+  Store.del('fila'); limparSessao(); ME = null; location.hash = ''; location.reload();
+}
+function sessaoExpirada(msg) {
+  limparSessao();
+  toast(msg || 'Sua sessão expirou. Entre novamente.', 'err');
+  setTimeout(() => location.reload(), 1500);
+}
 const isAdmin = () => ME?.perfil === 'admin';
 
 /* ---------- 5. REGRAS DE NEGÓCIO ---------- */
@@ -300,66 +431,6 @@ function stats(sdr, de, ate) {
   };
 }
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
-
-/* ---------- 6. DADOS DEMO (marcados com demo:true — remova em Configurações) ---------- */
-function seedDemo() {
-  const t = new Date();
-  const D = n => toISODate(addDays(t, n));
-  const DT = (n, h = '09:30') => `${D(n)}T${h}`;
-  const demo = [
-    // nome, empresa, sdr, cidade, bairro, endereço, tipo, serviço, origem, dias de entrada, status, visita [dias, hora, status], orçamento [desc, qtd, valor, status]
-    ['João da Silva', '', 'Maria Izabel', 'Volta Redonda', 'Aterrado', 'Rua 33, 145', 'Residencial', 'Alarme monitorado', 'WhatsApp', -20, 'fechado', [-15, '09:00', 'realizada'], ['Kit alarme monitorado 8 zonas com instalação', 1, 3200, 'aprovado']],
-    ['Carla Mendes', 'Empresa XPTO Ltda', 'Maria Izabel', 'Barra Mansa', 'Centro', 'Av. Joaquim Leite, 820', 'Comercial', 'CFTV', 'Instagram', -14, 'orc_enviado', [-8, '14:00', 'realizada'], ['Câmera IP 4MP instalada', 12, 850, 'enviado']],
-    ['Rogério Alves', 'Mercado Bom Preço', 'Maria Izabel', 'Volta Redonda', 'Vila Santa Cecília', 'Rua 14, 230', 'Comercial', 'CFTV', 'Indicação', -5, 'visita_agendada', [0, '15:30', 'agendada'], null],
-    ['Patrícia Nogueira', '', 'Maria Izabel', 'Pinheiral', 'Centro', 'Rua Nilo Peçanha, 55', 'Residencial', 'Cerca elétrica', 'WhatsApp', -2, 'contato', null, null],
-    ['Condomínio Solar das Águas', 'Condomínio Solar das Águas', 'Maria Izabel', 'Volta Redonda', 'Jardim Amália', 'Rua Campos Elíseos, 900', 'Condomínio', 'Portaria remota', 'Site', -1, 'novo', null, null],
-    ['Anderson Costa', 'Transportadora AC', 'Daiana', 'Resende', 'Campos Elíseos', 'Av. Brasil, 1500', 'Comercial', 'Rastreamento veicular', 'Ligação', -18, 'negociacao', [-12, '10:00', 'realizada'], ['Rastreador veicular com monitoramento (mensal x 12)', 8, 1290, 'enviado']],
-    ['Fernanda Lima', '', 'Daiana', 'Volta Redonda', 'Retiro', 'Rua Getúlio Vargas, 77', 'Residencial', 'Alarme monitorado', 'WhatsApp', -10, 'perdido', [-7, '16:00', 'realizada'], ['Kit alarme monitorado 6 zonas', 1, 2450, 'recusado']],
-    ['Clínica Vida Plena', 'Clínica Vida Plena', 'Daiana', 'Barra Mansa', 'Ano Bom', 'Rua Pinto Ribeiro, 310', 'Comercial', 'Controle de acesso', 'Indicação', -6, 'visita_agendada', [1, '10:30', 'agendada'], null],
-    ['Marcos Pereira', '', 'Daiana', 'Barra do Piraí', 'Centro', 'Rua Tiradentes, 12', 'Residencial', 'CFTV', 'Instagram', -3, 'visita_agendar', null, null],
-    ['Sítio Boa Esperança', '', 'Daiana', 'Piraí', 'Zona rural', 'Estrada RJ-145, km 8', 'Rural', 'Cerca elétrica', 'WhatsApp', -9, 'cancelado', [-4, '08:30', 'cancelada'], null],
-    ['Luciana Rocha', 'Padaria Pão Nosso', 'Regiane', 'Volta Redonda', 'Conforto', 'Av. Paulo de Frontin, 450', 'Comercial', 'CFTV', 'WhatsApp', -16, 'fechado', [-11, '11:00', 'realizada'], ['Sistema CFTV 8 câmeras + DVR + instalação', 1, 8500, 'aprovado']],
-    ['Indústria Metalfer', 'Metalfer Indústria Ltda', 'Regiane', 'Volta Redonda', 'Roma', 'Rua 1º de Maio, 2000', 'Industrial', 'Vigilância', 'Site', -8, 'visita_realizada', [-2, '09:00', 'realizada'], ['Posto de vigilância 12x36 (mensal)', 1, 14800, 'rascunho']],
-    ['Ricardo Souza', '', 'Regiane', 'Barra Mansa', 'Vila Nova', 'Rua Rio Branco, 98', 'Residencial', 'Alarme monitorado', 'Ligação', -4, 'visita_agendada', [2, '14:00', 'agendada'], null],
-    ['Escola Pequeno Saber', 'Escola Pequeno Saber', 'Regiane', 'Volta Redonda', 'Sessenta', 'Rua Gustavo Lira, 60', 'Comercial', 'CFTV', 'Indicação', -7, 'orc_enviado', [-3, '15:00', 'realizada'], ['Câmeras Full HD com gravação em nuvem', 10, 1230, 'enviado']],
-    ['Tatiane Gomes', '', 'Regiane', 'Resende', 'Manejo', 'Rua do Rosário, 41', 'Residencial', 'Cerca elétrica', 'WhatsApp', 0, 'novo', null, null]
-  ];
-  const nomeTel = i => `(24) 99${String(810 + i * 37).slice(-3)}-${String(1000 + i * 263).slice(-4)}`;
-  demo.forEach((d, i) => {
-    const [nome, empresa, sdr, cidade, bairro, endereco, tipo, servico, origem, dEnt, status, vis, orc] = d;
-    const tel = nomeTel(i);
-    const hist = [{ data: DT(dEnt, '08:45'), tipo: 'entrada', texto: `Cliente entrou via ${origem} (SDR ${sdr})`, por: sdr }];
-    if (status !== 'novo') hist.push({ data: DT(dEnt, '11:20'), tipo: 'contato', texto: 'Primeiro contato realizado', por: sdr });
-    const c = DB.insert('clientes', {
-      demo: true, nome, empresa, telefone: tel, whatsapp: tel, email: nome.split(' ')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') + '@exemplo.com',
-      endereco, bairro, cidade, cep: '27200-000', tipo, servico, obs: 'Registro de demonstração.', sdr, origem, status, entrada: DT(dEnt, '08:45'), historico: hist
-    });
-    if (vis) {
-      const [dv, hora, vst] = vis;
-      DB.insert('visitas', { demo: true, clienteId: c.id, data: D(dv), hora, endereco: `${endereco} - ${bairro}, ${cidade}`, tecnico: 'Responsável comercial', tipo: 'Levantamento para orçamento', obs: '', status: vst });
-      hist.push({ data: DT(dEnt + 1, '10:00'), tipo: 'visita_agendada', texto: `Visita agendada para ${fmtDate(D(dv))} às ${hora}`, por: sdr });
-      if (vst === 'realizada') hist.push({ data: DT(dv, hora), tipo: 'visita_realizada', texto: `Visita realizada em ${fmtDate(D(dv))}`, por: 'Administrador' });
-      if (vst === 'cancelada') hist.push({ data: DT(dv, hora), tipo: 'visita_cancelada', texto: 'Visita cancelada pelo cliente', por: sdr });
-    }
-    if (orc) {
-      const [desc, qtd, valor, ost] = orc;
-      const dv = vis[0] + 1;
-      const o = { demo: true, numero: CONFIG.proxNumero++, clienteId: c.id, data: D(dv), validade: D(dv + CONFIG.validadeDias), itens: [{ desc, qtd, valor }], descontoTipo: 'pct', desconto: 5, pagamento: CONFIG.pagamentoPadrao, prazo: '7 dias úteis após aprovação', obs: '', status: ost };
-      DB.insert('orcamentos', { ...o, ...calcOrc(o) });
-      hist.push({ data: DT(dv, '17:00'), tipo: 'orcamento_criado', texto: `Orçamento nº ${numOrc(o.numero)} criado`, por: 'Administrador' });
-      if (ost !== 'rascunho') hist.push({ data: DT(dv, '17:30'), tipo: 'orcamento_enviado', texto: `Orçamento nº ${numOrc(o.numero)} enviado`, por: sdr });
-      if (status === 'negociacao') hist.push({ data: DT(dv + 2, '10:00'), tipo: 'negociacao', texto: 'Cliente pediu revisão de condições', por: sdr });
-      if (FINAL_CLI.includes(status)) hist.push({ data: DT(dv + 3, '15:00'), tipo: 'resultado', texto: `Resultado: ${ST_CLI[status].l}`, por: 'Administrador' });
-    }
-    DB.update('clientes', c.id, { historico: hist });
-  });
-  CONFIG.demoSeeded = true; saveConfig();
-}
-function removerDemo() {
-  ['clientes', 'visitas', 'orcamentos'].forEach(col => DB.replace(col, DB.all(col).filter(x => !x.demo)));
-  const nums = DB.all('orcamentos').map(o => o.numero);
-  CONFIG.proxNumero = nums.length ? Math.max(...nums) + 1 : 1; saveConfig();
-}
 
 /* ---------- 7. UI BASE ---------- */
 const ui = {
@@ -814,7 +885,6 @@ VIEWS.config = () => {
       <div class="c12 form-actions" style="margin:0"><button class="btn btn-primary">Salvar senha</button></div></form></div>`;
   if (!isAdmin()) return head('Configurações', '') + senha;
   const users = DB.all('usuarios');
-  const nDemo = ['clientes', 'visitas', 'orcamentos'].reduce((s, c) => s + DB.all(c).filter(x => x.demo).length, 0);
   return head('Configurações', 'Dados da empresa, mensagens, usuários e backup.') +
     `<div class="grid g2">
     <div class="panel glass"><h3>Dados da empresa (cabeçalho dos PDFs)</h3><form data-form="empresa" class="form-grid">
@@ -853,18 +923,16 @@ VIEWS.config = () => {
         <label class="field c4"><span>Cor</span><input name="cor" type="color" value="#7d8cff"></label>
         <div class="c12 form-actions" style="margin:0"><button class="btn">+ Adicionar SDR</button></div></form>
     </div>
-    <div class="panel glass"><h3>Dados e backup</h3>
-      <p style="color:var(--muted);font-size:14px;margin-top:0">Os dados ficam neste navegador. Faça backup semanal e guarde fora do computador.</p>
+    <div class="panel glass"><h3>Banco de dados</h3>
+      <p style="color:var(--muted);font-size:14px;margin-top:0">Os dados ficam na Planilha Google do Apps Script e aparecem para todos na hora. Cada SDR vê apenas os próprios clientes.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary" data-action="backup">Baixar backup (JSON)</button>
-        <label class="btn">Restaurar backup<input type="file" accept="application/json" id="restoreFile" hidden></label>
+        <label class="btn">Importar backup antigo<input type="file" accept="application/json" id="restoreFile" hidden></label>
       </div>
-      <h3 style="margin-top:22px">Dados de demonstração</h3>
-      <p style="color:var(--muted);font-size:14px;margin-top:0">${nDemo} registro(s) DEMO no sistema.</p>
+      <p style="color:var(--muted);font-size:13px">A importação <b>junta</b> os dados do arquivo com os que já estão no banco (dados DEMO são ignorados). Use para trazer o que cada SDR cadastrou na versão antiga, que guardava tudo no navegador.</p>
+      <h3 style="margin-top:22px">Apagar dados</h3>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" data-action="removerDemo" ${nDemo ? '' : 'disabled'}>Remover dados DEMO</button>
-        <button class="btn" data-action="restaurarDemo">Carregar dados DEMO</button>
-        <button class="btn btn-danger" data-action="resetAll">Apagar tudo</button>
+        <button class="btn btn-danger" data-action="resetAll">Apagar todos os clientes, visitas e orçamentos</button>
       </div></div>
     </div><div style="margin-top:16px">${senha}</div>`;
 };
@@ -1426,18 +1494,12 @@ const Actions = {
     downloadBlob(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }), `backup-sdr-control-${todayISO()}.json`);
     toast('Backup baixado.');
   },
-  async removerDemo() {
-    if (!await confirmar('Remover todos os clientes, visitas e orçamentos DEMO?', 'Remover')) return;
-    removerDemo(); refresh(); toast('Dados DEMO removidos.');
-  },
-  async restaurarDemo() {
-    if (!await confirmar('Adicionar os dados DEMO novamente? Seus dados reais continuam.', 'Carregar')) return;
-    removerDemo(); seedDemo(); refresh(); toast('Dados DEMO carregados.');
-  },
   async resetAll() {
-    if (!await confirmar('Apagar TODOS os clientes, visitas e orçamentos deste navegador? Faça backup antes.', 'Apagar tudo')) return;
-    ['clientes', 'visitas', 'orcamentos', 'notificacoes'].forEach(c => DB.replace(c, []));
-    CONFIG.proxNumero = 1; saveConfig(); refresh(); toast('Dados apagados.', 'info');
+    if (!await confirmar('Apagar TODOS os clientes, visitas e orçamentos do banco de dados, para todas as SDRs? Faça backup antes. Usuários e configurações continuam.', 'Apagar tudo')) return;
+    const txt = prompt('Para confirmar, digite APAGAR');
+    if ((txt || '').trim().toUpperCase() !== 'APAGAR') return toast('Nada foi apagado.', 'info');
+    try { await api('apagarTudo'); await sincronizar(true); toast('Dados apagados.', 'info'); }
+    catch (e) { toast(e.message, 'err'); }
   },
   resetSenha(id) {
     const u = DB.get('usuarios', id);
@@ -1465,7 +1527,9 @@ const Forms = {
     if (!d.sdr) return toast('Selecione a SDR responsável.', 'err');
     if (digits(d.whatsapp || d.telefone).length < 10) return toast('Informe WhatsApp ou telefone com DDD.', 'err');
     const w = digits(d.whatsapp || d.telefone);
-    const dup = DB.all('clientes').find(x => x.id !== id && (digits(x.whatsapp) === w || digits(x.telefone) === w));
+    let dup = DB.all('clientes').find(x => x.id !== id && (digits(x.whatsapp) === w || digits(x.telefone) === w));
+    // a SDR só enxerga os próprios clientes: pergunta ao banco se outra SDR já tem esse número
+    if (!dup) { try { dup = await api('checarTelefone', { tel: w, id }); } catch { dup = null; } }
     if (dup && !await confirmar(`${dup.nome} já está cadastrado com esse número (SDR ${dup.sdr}). Salvar mesmo assim?`, 'Salvar mesmo assim')) return;
     if (id) { editarCliente(id, d); toast('Cliente atualizado com sucesso.'); refresh(); return Actions.verCliente(id); }
     const c = salvarCliente(d);
@@ -1510,7 +1574,8 @@ const Forms = {
   usuario(form) {
     const d = formData(form);
     if (DB.all('usuarios').some(u => u.usuario.toLowerCase() === d.usuario.trim().toLowerCase())) return toast('Esse usuário já existe.', 'err');
-    DB.insert('usuarios', { nome: d.nome.trim(), usuario: d.usuario.trim().toLowerCase(), senha: hash(d.senha), perfil: d.perfil, sdr: d.perfil === 'sdr' ? d.sdr : '' });
+    if ((d.senha || '').length < 6) return toast('A senha precisa ter pelo menos 6 caracteres.', 'err');
+    DB.insert('usuarios', { nome: d.nome.trim(), usuario: d.usuario.trim().toLowerCase(), senhaNova: d.senha, perfil: d.perfil, sdr: d.perfil === 'sdr' ? d.sdr : '' });
     toast('Usuário criado.'); refresh();
   },
   sdr(form) {
@@ -1518,12 +1583,16 @@ const Forms = {
     if (CONFIG.sdrs.some(s => norm(s.nome) === norm(nome))) return toast('Essa SDR já existe.', 'err');
     CONFIG.sdrs.push({ nome, cor: d.cor }); saveConfig(); toast(`SDR ${nome} adicionada. Crie o usuário dela abaixo.`); refresh();
   },
-  senha(form) {
+  async senha(form) {
     const d = formData(form);
-    if (hash(d.atual) !== ME.senha) return toast('Senha atual incorreta.', 'err');
-    DB.update('usuarios', ME.id, { senha: hash(d.nova) }); ME = DB.get('usuarios', ME.id); form.reset(); toast('Senha alterada.');
+    if ((d.nova || '').length < 6) return toast('A nova senha precisa ter pelo menos 6 caracteres.', 'err');
+    try { await api('changePassword', { atual: d.atual, nova: d.nova }); form.reset(); toast('Senha alterada.'); }
+    catch (e) { toast(e.message, 'err'); }
   },
-  resetSenha(form) { DB.update('usuarios', form.dataset.id, { senha: hash(form.nova.value) }); closeModal(); toast('Senha redefinida.'); }
+  resetSenha(form) {
+    if ((form.nova.value || '').length < 6) return toast('A senha precisa ter pelo menos 6 caracteres.', 'err');
+    DB.update('usuarios', form.dataset.id, { senhaNova: form.nova.value }); closeModal(); toast('Senha redefinida.');
+  }
 };
 
 /* ---------- BUSCA GLOBAL ---------- */
@@ -1600,10 +1669,14 @@ function bindEvents() {
   });
   document.addEventListener('dragend', () => $$('.kan-col.drop').forEach(x => x.classList.remove('drop')));
 
-  $('#loginForm').addEventListener('submit', e => {
+  $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault();
-    if (login($('#loginUser').value, $('#loginPass').value)) startApp();
-    else { $('#loginError').textContent = 'Usuário ou senha incorretos.'; $('#loginPass').select(); }
+    const btn = $('#loginForm button[type=submit]');
+    $('#loginError').textContent = '';
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    try { await login($('#loginUser').value, $('#loginPass').value); startApp(); }
+    catch (err) { $('#loginError').textContent = err.message; $('#loginPass').select(); }
+    finally { btn.disabled = false; btn.textContent = 'Entrar'; }
   });
   window.addEventListener('hashchange', () => ME && render());
 }
@@ -1622,14 +1695,17 @@ async function buscarCep(form, cep) {
 function restaurarBackup(file) {
   const r = new FileReader();
   r.onload = async () => {
+    let data;
+    try { data = JSON.parse(r.result); if (data.app !== 'sdr-control') throw new Error(); }
+    catch { return toast('Arquivo inválido. Use um backup gerado pelo SDR Control.', 'err'); }
+    const n = c => (data[c] || []).filter(x => !x.demo).length;
+    if (!await confirmar(`Juntar ao banco de dados: ${n('clientes')} cliente(s), ${n('visitas')} visita(s) e ${n('orcamentos')} orçamento(s)? Nada do que já existe será apagado. Dados DEMO são ignorados.`, 'Importar')) return;
     try {
-      const data = JSON.parse(r.result);
-      if (data.app !== 'sdr-control') throw new Error();
-      if (!await confirmar('Restaurar este backup? Os dados atuais deste navegador serão substituídos.', 'Restaurar')) return;
-      COLLECTIONS.forEach(c => Array.isArray(data[c]) && DB.replace(c, data[c]));
-      if (data.config) { Store.set('config', data.config); loadConfig(); }
-      toast('Backup restaurado.'); refresh();
-    } catch { toast('Arquivo inválido. Use um backup gerado pelo SDR Control.', 'err'); }
+      toast('Importando…', 'info');
+      const res = await api('importar', { data });
+      await sincronizar(true);
+      toast(`Importado: ${res.clientes} cliente(s) novo(s), ${res.visitas} visita(s), ${res.orcamentos} orçamento(s).`);
+    } catch (e) { toast(e.message, 'err'); }
   };
   r.readAsText(file);
 }
@@ -1646,17 +1722,36 @@ function startApp() {
   const hoje = myVisitas().filter(v => v.data === todayISO() && ['agendada', 'reagendada'].includes(v.status)).length;
   if (hoje) setTimeout(() => toast(`Você possui ${hoje} visita(s) hoje.`, 'info'), 600);
   lembretes(); setInterval(lembretes, 60e3);
+  Sync.indicador(); Sync.agendar(500);
+  setInterval(() => sincronizar(false), 25e3);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizar(false); });
 }
 
 async function boot() {
-  await DB.init();
   loadConfig();
-  ensureUsers();
-  if (!CONFIG.demoSeeded) seedDemo();
   applyTheme(Store.get('theme', 'dark'));
   bindEvents();
-  ME = currentUser();
-  if (ME) startApp(); else { $('#login').hidden = false; $('#loginUser').focus(); }
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!apiConfigurada()) {
+    $('#login').hidden = false;
+    $('#loginError').innerHTML = 'Falta configurar o banco de dados: abra <b>config.js</b> e cole o endereço /exec do Apps Script.';
+    return;
+  }
+  ME = currentUser();
+  if (!ME) { $('#login').hidden = false; $('#loginUser').focus(); return; }
+  // abre na hora com a última cópia salva e atualiza com o servidor em seguida
+  const cache = Store.get('cache_' + ME.id, null);
+  if (cache) { aplicarSnapshot(cache); startApp(); }
+  else { $('#login').hidden = false; $('#loginError').textContent = 'Carregando seus dados…'; }
+  try {
+    const r = await api('bootstrap');
+    ME = r.usuario; Store.set('me', ME);
+    aplicarSnapshot(r.snapshot);
+    if (cache) refresh(); else { $('#loginError').textContent = ''; startApp(); }
+  } catch (e) {
+    if (e instanceof ErroSessao) { limparSessao(); ME = null; $('#app').hidden = true; $('#login').hidden = false; $('#loginError').textContent = e.message; }
+    else if (cache) toast('Sem conexão: mostrando os últimos dados salvos neste aparelho.', 'info');
+    else $('#loginError').textContent = e.message;
+  }
 }
 boot();

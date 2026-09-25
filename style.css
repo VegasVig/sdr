@@ -457,3 +457,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .login-card { padding: 30px 22px 22px; }
   .login-title { font-size: 23px; letter-spacing: .1em; }
 }
+
+/* ---------- Sincronização com o banco de dados ---------- */
+.sync-chip { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; background: rgba(60,212,255,.12); color: #3cd4ff; border: 1px solid rgba(60,212,255,.35); white-space: nowrap; }
+.sync-chip.off { background: rgba(255,93,115,.12); color: #ff5d73; border-color: rgba(255,93,115,.4); }
