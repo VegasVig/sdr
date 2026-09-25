@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SDR Control — Vegas Vigilância e Segurança</title>
+  <meta name="theme-color" content="#080e1a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="login" class="login">
+    <div class="login-grid" aria-hidden="true"></div>
+    <div class="login-scan" aria-hidden="true"></div>
+    <form id="loginForm" class="login-card glass" autocomplete="on">
+      <img src="assets/logo.png" alt="Vegas Vigilância e Segurança" class="logo login-logo">
+      <h1 class="login-title">SDR Control</h1>
+      <p class="login-sub">Gestão de clientes, orçamentos e visitas</p>
+      <label class="field">
+        <span>Usuário</span>
+        <input id="loginUser" name="username" autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span>Senha</span>
+        <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="loginError" class="login-error" role="alert"></p>
+      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+      <p class="login-hint">Primeiro acesso: <b>admin</b> / <b>vegas2026</b> — troque em Configurações.</p>
+    </form>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="app" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img src="assets/logo.png" alt="Vegas" class="logo">
+        <span>SDR Control</span>
+      </div>
+      <nav class="nav" id="nav">
+        <a data-view="dashboard"><i>🏠</i><span>Dashboard</span></a>
+        <a data-view="clientes"><i>👥</i><span>Clientes</span></a>
+        <a data-view="oportunidades"><i>📋</i><span>Oportunidades</span></a>
+        <a data-view="agenda"><i>📅</i><span>Agenda de visitas</span></a>
+        <a data-view="visitas"><i>🧭</i><span>Minhas visitas</span></a>
+        <a data-view="orcamentos"><i>💰</i><span>Orçamentos</span></a>
+        <a data-view="relatorios"><i>📄</i><span>PDFs / Relatórios</span></a>
+        <a data-view="sdrs"><i>👩‍💼</i><span>SDRs</span></a>
+        <a data-view="indicadores"><i>📊</i><span>Indicadores</span></a>
+        <a data-view="config"><i>⚙️</i><span>Configurações</span></a>
+      </nav>
+      <div class="sidebar-foot">Vegas Vigilância e Segurança</div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="menuBtn" aria-label="Abrir menu">☰</button>
+        <div class="search">
+          <input id="globalSearch" type="search" placeholder="Buscar cliente, telefone, empresa, endereço, SDR ou nº do orçamento">
+          <div id="searchResults" class="search-results glass" hidden></div>
+        </div>
+        <div class="topbar-right">
+          <div class="clock hide-mobile">
+            <span id="clockDate"></span>
+            <b id="clockTime"></b>
+          </div>
+          <button class="icon-btn" id="themeBtn" aria-label="Alternar tema">🌙</button>
+          <button class="icon-btn" id="notifBtn" aria-label="Notificações">🔔<em id="notifCount" hidden>0</em></button>
+          <div class="user-chip hide-mobile">
+            <span class="avatar" id="userAvatar">A</span>
+            <div><b id="userName"></b><small id="userRole"></small></div>
+          </div>
+          <button class="icon-btn" id="logoutBtn" aria-label="Sair" title="Sair">⏻</button>
+        </div>
+        <div id="notifPanel" class="notif-panel glass" hidden></div>
+      </header>
+
+      <div class="quickbar">
+        <button class="btn btn-primary" data-action="novoCliente">+ Novo cliente</button>
+        <button class="btn" data-action="novaVisita">+ Agendar visita</button>
+        <button class="btn" data-action="novoOrcamento">+ Novo orçamento</button>
+        <button class="btn" data-action="relatorio">Gerar relatório</button>
+      </div>
+
+      <main id="view" class="view" tabindex="-1"></main>
+    </div>
+
+    <nav class="bottomnav only-mobile">
+      <a data-view="dashboard"><i>🏠</i>Início</a>
+      <a data-view="clientes"><i>👥</i>Clientes</a>
+      <button class="fab" id="fabBtn" aria-label="Ações rápidas">+</button>
+      <a data-view="agenda"><i>📅</i>Agenda</a>
+      <a data-view="orcamentos"><i>💰</i>Orçam.</a>
+    </nav>
+    <div class="fab-menu glass" id="fabMenu" hidden>
+      <button data-action="novoCliente">👤 Novo cliente</button>
+      <button data-action="novaVisita">📅 Agendar visita</button>
+      <button data-action="novoOrcamento">💰 Novo orçamento</button>
+      <button data-action="relatorio">📄 Gerar relatório</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL / TOAST ============ -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box glass" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <h2 id="modalTitle"></h2>
+        <button class="icon-btn" data-close aria-label="Fechar">✕</button>
+      </header>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="assets/vendor/jspdf.umd.min.js"></script>
+  <script src="assets/vendor/jspdf.plugin.autotable.min.js"></script>
+  <script src="assets/logo-data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
