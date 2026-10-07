@@ -1,129 +1,1101 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>SDR Control — Vegas Vigilância e Segurança</title>
-  <meta name="theme-color" content="#080e1a">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="assets/icons/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>CRM Vegas — Leads e Orçamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   CRM Vegas — Vegas Vigilância e Segurança
+   ========================================================================= */
+:root{
+  --tinta:#13283d; --tinta-2:#1d3a55; --aco:#56697c; --linha:#d9e0e7; --papel:#eef2f5; --branco:#fff;
+  --sinal:#e3a008; --sinal-claro:#fdf3d7; --ok:#1d7f55; --ok-claro:#e2f3ea; --atraso:#c2410c; --atraso-claro:#fdebe1;
+  --erro:#b42318; --erro-claro:#fde8e6; --info:#245f94; --info-claro:#e3eef8;
+  --texto:#16222e; --texto-2:#4c5d6d;
+  --fonte-titulo:"Archivo","Arial Narrow",Arial,sans-serif; --fonte:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r1:4px; --r2:8px; --sombra:0 1px 2px rgba(19,40,61,.08),0 8px 24px rgba(19,40,61,.08);
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;height:100%}
+body{font-family:var(--fonte);font-size:15px;line-height:1.5;color:var(--texto);background:var(--papel);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--fonte-titulo);font-stretch:87%;line-height:1.15;margin:0;color:var(--tinta)}
+h1{font-size:1.75rem;font-weight:800} h2{font-size:1.25rem;font-weight:700} h3{font-size:1.05rem;font-weight:700}
+a{color:var(--info)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sinal);outline-offset:2px}
+[hidden]{display:none!important}
+.mudo{color:var(--texto-2)} .peq{font-size:.85rem} .num{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Botões e campos ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-height:40px;padding:.5rem 1rem;border-radius:var(--r1);border:1px solid var(--linha);background:var(--branco);cursor:pointer;font-weight:600;font-size:.92rem;white-space:nowrap;text-decoration:none;color:var(--tinta)}
+.btn:hover{border-color:var(--aco)}
+.btn.pri{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.btn.pri:hover{background:var(--tinta-2)}
+.btn.perigo{color:var(--erro);border-color:#f0c4bf}
+.btn.discreto{border-color:transparent;background:transparent}
+.btn.peq{min-height:32px;padding:.25rem .65rem;font-size:.85rem}
+.btn[disabled]{opacity:.55;cursor:progress}
+.btn .giro{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:giro .7s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
+label.campo{display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:600;color:var(--texto-2)}
+.inp,select.inp,textarea.inp{width:100%;min-height:40px;padding:.5rem .65rem;border:1px solid var(--linha);border-radius:var(--r1);background:var(--branco);font-weight:400;color:var(--texto);font-size:.95rem}
+textarea.inp{min-height:88px;resize:vertical}
+.inp:focus{border-color:var(--info);outline:none;box-shadow:0 0 0 3px var(--info-claro)}
+.grade{display:grid;gap:.9rem 1rem;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.grade .larga{grid-column:1/-1}
+.check{display:flex;gap:.6rem;align-items:flex-start;font-size:.92rem;cursor:pointer}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--tinta)}
+
+/* ---------- Pílulas de status ---------- */
+.pill{display:inline-block;padding:.12rem .55rem;border-radius:999px;font-size:.78rem;font-weight:600;background:var(--papel);color:var(--texto-2);white-space:nowrap}
+.pill.ok{background:var(--ok-claro);color:var(--ok)} .pill.atraso{background:var(--atraso-claro);color:var(--atraso)}
+.pill.erro{background:var(--erro-claro);color:var(--erro)} .pill.info{background:var(--info-claro);color:var(--info)}
+.pill.sinal{background:var(--sinal-claro);color:#8a5a00}
+
+/* ---------- Login ---------- */
+#telaLogin{min-height:100%;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr)}
+.login-marca{background:var(--tinta);color:#dfe8f0;padding:3rem clamp(1.5rem,5vw,4rem);display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.login-marca h1{color:#fff;font-size:clamp(2rem,4.5vw,3.4rem);font-stretch:75%;letter-spacing:-.01em;max-width:12ch}
+.login-marca p{max-width:40ch;color:#b8c7d6}
+.radar{position:absolute;right:-120px;bottom:-120px;width:420px;height:420px;border-radius:50%;border:1px solid rgba(227,160,8,.35);box-shadow:0 0 0 60px rgba(227,160,8,.04),0 0 0 120px rgba(227,160,8,.03)}
+.radar::after{content:"";position:absolute;inset:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:var(--sinal);box-shadow:0 0 0 6px rgba(227,160,8,.25)}
+.login-form{display:flex;align-items:center;justify-content:center;padding:2rem}
+.login-form form{width:min(380px,100%);display:flex;flex-direction:column;gap:1rem}
+.aviso{padding:.75rem 1rem;border-radius:var(--r2);background:var(--sinal-claro);color:#6b4600;font-size:.88rem}
+.aviso.erro{background:var(--erro-claro);color:var(--erro)}
+@media (max-width:760px){#telaLogin{grid-template-columns:1fr}.login-marca{padding:2rem 1.5rem 2.5rem}.radar{width:260px;height:260px;right:-90px;bottom:-110px}}
+
+/* ---------- Estrutura do app ---------- */
+#app{min-height:100%;display:grid;grid-template-columns:236px minmax(0,1fr)}
+.lateral{background:var(--tinta);color:#c9d6e2;display:flex;flex-direction:column;padding:1.25rem .75rem;position:sticky;top:0;height:100vh}
+.lateral .marca{font-family:var(--fonte-titulo);font-stretch:75%;font-weight:800;font-size:1.35rem;color:#fff;padding:0 .6rem 1.25rem;line-height:1.1}
+.lateral .marca small{display:block;font-family:var(--fonte);font-stretch:100%;font-weight:500;font-size:.75rem;color:#8fa4b8;margin-top:.25rem}
+.nav{display:flex;flex-direction:column;gap:.15rem}
+.nav a{display:flex;align-items:center;gap:.7rem;padding:.6rem .7rem;border-radius:var(--r1);color:#c9d6e2;text-decoration:none;font-weight:500}
+.nav a svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8}
+.nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav a[aria-current="page"]{background:rgba(227,160,8,.14);color:#fff;box-shadow:inset 3px 0 0 var(--sinal)}
+.nav .badge{margin-left:auto;background:var(--sinal);color:var(--tinta);font-size:.72rem;font-weight:700;border-radius:999px;padding:0 .45rem}
+.lateral .rodape{margin-top:auto;font-size:.8rem;color:#8fa4b8;padding:.6rem}
+main{min-width:0;padding:1.5rem clamp(1rem,3vw,2.25rem) 5rem}
+.faixas{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem}
+.faixa{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.6rem .9rem;border-radius:var(--r2);font-size:.9rem;background:var(--sinal-claro);color:#6b4600;border:1px solid #f2dc9c}
+.faixa.erro{background:var(--erro-claro);color:var(--erro);border-color:#f3c3bd}
+.cabecalho{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.cabecalho p{margin:.25rem 0 0}
+.bloco{background:var(--branco);border:1px solid var(--linha);border-radius:var(--r2);padding:1.1rem 1.2rem}
+.bloco+.bloco{margin-top:1rem}
+.bloco h2{margin-bottom:.85rem}
+.filtros{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin-bottom:1rem}
+.filtros label.campo{min-width:140px;flex:1 1 140px;max-width:220px}
+.filtros .busca{flex:2 1 260px;max-width:none}
+.vazio{padding:2rem 1rem;text-align:center;color:var(--texto-2)}
+.vazio strong{display:block;color:var(--tinta);font-size:1.05rem;margin-bottom:.25rem}
+.carregando{padding:2rem;text-align:center;color:var(--texto-2)}
+.rodape-app{margin-top:2.5rem;font-size:.8rem;color:var(--texto-2);text-align:center}
+
+/* Navegação inferior no celular */
+@media (max-width:900px){
+  #app{grid-template-columns:1fr}
+  .lateral{position:fixed;inset:auto 0 0 0;height:auto;flex-direction:row;padding:.35rem .5rem calc(.35rem + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 -4px 16px rgba(0,0,0,.18)}
+  .lateral .marca,.lateral .rodape{display:none}
+  .nav{flex-direction:row;justify-content:space-around;width:100%}
+  .nav a{flex-direction:column;gap:.15rem;font-size:.72rem;padding:.4rem .3rem;flex:1;text-align:center}
+  .nav a[aria-current="page"]{box-shadow:inset 0 3px 0 var(--sinal)}
+  .nav .badge{position:absolute;margin:0 0 0 18px;font-size:.65rem}
+  main{padding-top:calc(1rem + env(safe-area-inset-top,0px));padding-bottom:calc(6rem + env(safe-area-inset-bottom,0px))}
+}
+
+/* ---------- Painel: números ---------- */
+.numeros{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--linha);border-radius:var(--r2);background:var(--branco);overflow:hidden}
+.numeros div{padding:.85rem 1rem;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha)}
+.numeros div:nth-child(6n){border-right:0}
+.numeros dt{font-size:.8rem;color:var(--texto-2);font-weight:500}
+.numeros dd{margin:.15rem 0 0;font-family:var(--fonte-titulo);font-stretch:87%;font-weight:700;font-size:1.45rem;color:var(--tinta);font-variant-numeric:tabular-nums}
+.numeros .alerta dd{color:var(--atraso)}
+.numeros .dinheiro dd{font-size:1.2rem}
+@media (max-width:1100px){.numeros{grid-template-columns:repeat(3,minmax(0,1fr))}.numeros div:nth-child(6n){border-right:1px solid var(--linha)}.numeros div:nth-child(3n){border-right:0}}
+@media (max-width:520px){.numeros{grid-template-columns:repeat(2,minmax(0,1fr))}.numeros div:nth-child(3n){border-right:1px solid var(--linha)}.numeros div:nth-child(2n){border-right:0}}
+
+.painel-grade{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:1rem;margin-top:1rem;align-items:start}
+@media (max-width:1100px){.painel-grade{grid-template-columns:1fr}}
+
+/* Ronda de contatos: o elemento principal do painel */
+.ronda{display:flex;flex-direction:column}
+.ronda-dia{display:grid;grid-template-columns:96px minmax(0,1fr);gap:0 1rem;padding:.9rem 0;border-top:1px solid var(--linha)}
+.ronda-dia:first-child{border-top:0;padding-top:.2rem}
+.ronda-data{font-family:var(--fonte-titulo);font-stretch:80%;font-weight:700;color:var(--tinta);line-height:1.1;padding-top:.35rem}
+.ronda-data small{display:block;font-family:var(--fonte);font-stretch:100%;font-weight:500;font-size:.78rem;color:var(--texto-2);margin-top:.2rem}
+.ronda-dia.atrasado .ronda-data{color:var(--atraso)}
+.ronda-dia.hoje .ronda-data{color:#8a5a00}
+.ronda-lista{display:flex;flex-direction:column;border-left:2px solid var(--linha);padding-left:1rem}
+.ronda-dia.atrasado .ronda-lista{border-left-color:var(--atraso)}
+.ronda-dia.hoje .ronda-lista{border-left-color:var(--sinal)}
+.parada{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.15rem .75rem;padding:.55rem .6rem;margin-left:-.6rem;border-radius:var(--r1);cursor:pointer;text-align:left;background:none;border:0;width:calc(100% + .6rem)}
+.parada::before{content:"";position:absolute;left:-1.42rem;top:1rem;width:10px;height:10px;border-radius:50%;background:var(--branco);border:2px solid var(--aco)}
+.ronda-dia.atrasado .parada::before{border-color:var(--atraso);background:var(--atraso)}
+.ronda-dia.hoje .parada::before{border-color:var(--sinal);background:var(--sinal)}
+.parada:hover{background:var(--papel)}
+.parada b{font-weight:600;color:var(--tinta)}
+.parada .acao{grid-column:1/-1;font-size:.88rem;color:var(--texto-2)}
+.parada .meta{font-size:.82rem;color:var(--texto-2);text-align:right}
+@media (max-width:560px){.ronda-dia{grid-template-columns:1fr}.ronda-data{margin-bottom:.4rem}.parada .meta{text-align:left;grid-column:1/-1}}
+
+.barras{display:flex;flex-direction:column;gap:.55rem}
+.barra{display:grid;grid-template-columns:130px minmax(0,1fr) 34px;gap:.6rem;align-items:center;font-size:.88rem}
+.barra span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.barra i{display:block;height:10px;border-radius:2px;background:var(--tinta-2);min-width:2px}
+.barra.Ganho i{background:var(--ok)} .barra.Perdido i{background:#9aa8b5}
+.fila-resumo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.fila-resumo a{display:flex;justify-content:space-between;padding:.5rem .7rem;border:1px solid var(--linha);border-radius:var(--r1);text-decoration:none;color:var(--texto);font-size:.88rem}
+.fila-resumo a b{font-variant-numeric:tabular-nums}
+
+/* ---------- Tabelas responsivas ---------- */
+.tabela-wrap{overflow-x:auto}
+table.tab{width:100%;border-collapse:collapse;font-size:.92rem}
+.tab th{text-align:left;font-size:.8rem;font-weight:600;color:var(--texto-2);padding:.55rem .6rem;border-bottom:2px solid var(--linha);white-space:nowrap}
+.tab td{padding:.65rem .6rem;border-bottom:1px solid var(--linha);vertical-align:top}
+.tab tbody tr.clicavel{cursor:pointer}
+.tab tbody tr.clicavel:hover{background:#f7f9fb}
+.tab .nome{font-weight:600;color:var(--tinta)}
+@media (max-width:760px){
+  .tab thead{display:none}
+  .tab,.tab tbody,.tab tr,.tab td{display:block;width:100%}
+  .tab tr{border:1px solid var(--linha);border-radius:var(--r2);margin-bottom:.6rem;padding:.4rem .2rem;background:var(--branco)}
+  .tab td{border:0;padding:.25rem .7rem;display:flex;gap:.75rem;justify-content:space-between}
+  .tab td::before{content:attr(data-r);color:var(--texto-2);font-size:.8rem;font-weight:600}
+  .tab td[data-r=""]::before{display:none}
+}
+
+/* ---------- Diálogos ---------- */
+dialog{border:0;padding:0;border-radius:var(--r2);box-shadow:var(--sombra);width:min(720px,calc(100vw - 2rem));max-height:calc(100vh - 2rem);color:var(--texto)}
+dialog::backdrop{background:rgba(19,40,61,.45)}
+dialog form,.dlg{display:flex;flex-direction:column;max-height:calc(100vh - 2rem)}
+.dlg-cab{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--linha)}
+.dlg-corpo{padding:1.1rem 1.25rem;overflow:auto}
+.dlg-pe{display:flex;justify-content:flex-end;gap:.6rem;padding:.85rem 1.25rem;border-top:1px solid var(--linha);flex-wrap:wrap;background:#fafbfc}
+.fechar{border:0;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--texto-2);padding:.2rem .4rem}
+fieldset{border:1px solid var(--linha);border-radius:var(--r2);padding:.9rem 1rem 1rem;margin:1rem 0 0}
+legend{font-weight:700;font-family:var(--fonte-titulo);font-stretch:87%;color:var(--tinta);padding:0 .35rem}
+@media (max-width:640px){dialog{width:100vw;max-width:100vw;height:100%;max-height:100%;border-radius:0;margin:0}dialog form,.dlg{max-height:100%;height:100%}.dlg-corpo{flex:1}}
+
+/* Painel do lead (lateral) */
+#dlgLead{margin-right:0;margin-top:0;height:100vh;max-height:100vh;width:min(860px,100vw);border-radius:0}
+#dlgLead .dlg{height:100%;max-height:100%}
+.lead-topo{padding:1.1rem 1.25rem .5rem;border-bottom:1px solid var(--linha)}
+.lead-topo .linha1{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
+.selos{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+.acoes{display:flex;flex-wrap:wrap;gap:.45rem;margin:.4rem 0 .6rem}
+.abas{display:flex;gap:.25rem;overflow-x:auto;margin:0 -.25rem}
+.abas button{border:0;background:none;padding:.6rem .8rem;font-weight:600;color:var(--texto-2);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.abas button[aria-selected="true"]{color:var(--tinta);border-bottom-color:var(--sinal)}
+.dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.85rem 1.25rem;margin:0}
+.dados dt{font-size:.8rem;color:var(--texto-2)} .dados dd{margin:.1rem 0 0;font-weight:500;overflow-wrap:anywhere}
+.dados .larga{grid-column:1/-1}
+.orc{border:1px solid var(--linha);border-radius:var(--r2);padding:.9rem 1rem;margin-bottom:.8rem}
+.orc-cab{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:center}
+.orc table{width:100%;border-collapse:collapse;font-size:.88rem;margin:.6rem 0}
+.orc td{padding:.3rem 0;border-bottom:1px dashed var(--linha)}
+.orc td:last-child{text-align:right}
+.linha-tempo{list-style:none;margin:0;padding:0}
+.linha-tempo li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--linha);font-size:.9rem}
+.linha-tempo time{color:var(--texto-2);font-size:.82rem;font-variant-numeric:tabular-nums}
+.linha-tempo b{color:var(--tinta)}
+.linha-tempo p{margin:.15rem 0 0;color:var(--texto-2);overflow-wrap:anywhere}
+@media (max-width:560px){.linha-tempo li{grid-template-columns:1fr;gap:.1rem}}
+.msg{border:1px solid var(--linha);border-radius:var(--r2);padding:.75rem .9rem;margin-bottom:.6rem}
+.msg .texto{background:#e9f5ec;border-radius:var(--r2);padding:.55rem .75rem;margin-top:.5rem;font-size:.9rem;white-space:pre-wrap}
+.msg .erro-txt{color:var(--erro);font-size:.85rem;margin-top:.35rem}
+.itens-orc{width:100%;border-collapse:collapse}
+.itens-orc th{font-size:.8rem;text-align:left;color:var(--texto-2);padding:.3rem}
+.itens-orc td{padding:.25rem}
+.itens-orc .inp{min-height:36px}
+.totais{display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;margin-top:.6rem;font-variant-numeric:tabular-nums}
+.totais strong{font-family:var(--fonte-titulo);font-size:1.3rem;color:var(--tinta)}
+@media (max-width:640px){.itens-orc thead{display:none}.itens-orc tr{display:grid;grid-template-columns:1fr 70px 110px 36px;gap:.3rem;margin-bottom:.4rem}.itens-orc td.st{display:none}}
+
+/* Fila */
+.seg{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1rem}
+.seg button{border:1px solid var(--linha);background:var(--branco);border-radius:999px;padding:.35rem .8rem;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--texto-2)}
+.seg button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.seg b{font-variant-numeric:tabular-nums;margin-left:.25rem}
+.barra-acoes{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem}
+.item-fila{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:.3rem .75rem;padding:.85rem .5rem;border-bottom:1px solid var(--linha)}
+.item-fila .texto{grid-column:2/-1;font-size:.88rem;color:var(--texto-2);white-space:pre-wrap}
+.item-fila .erro-txt{grid-column:2/-1;color:var(--erro);font-size:.85rem}
+.item-fila .ladod{text-align:right;display:flex;flex-direction:column;gap:.3rem;align-items:flex-end}
+@media (max-width:560px){.item-fila{grid-template-columns:28px minmax(0,1fr)}.item-fila .ladod{grid-column:2;align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap}}
+
+/* Ajustes */
+.subabas{display:flex;gap:.3rem;overflow-x:auto;border-bottom:1px solid var(--linha);margin-bottom:1rem}
+.subabas a{padding:.6rem .85rem;text-decoration:none;color:var(--texto-2);font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+.subabas a[aria-current="page"]{color:var(--tinta);border-bottom-color:var(--sinal)}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem}
+.chips button{border:1px dashed var(--aco);background:var(--branco);border-radius:var(--r1);padding:.2rem .5rem;font-size:.8rem;cursor:pointer;font-family:ui-monospace,Consolas,monospace}
+.previa{background:#e9f5ec;border-radius:var(--r2);padding:.75rem .9rem;white-space:pre-wrap;font-size:.92rem}
+.codigo{display:flex;gap:.5rem;align-items:center}
+.codigo code{flex:1;background:var(--papel);border:1px solid var(--linha);border-radius:var(--r1);padding:.5rem .6rem;font-size:.82rem;overflow-wrap:anywhere}
+.dias-semana{display:flex;gap:.4rem;flex-wrap:wrap}
+.dias-semana label{display:flex;align-items:center;gap:.3rem;border:1px solid var(--linha);border-radius:var(--r1);padding:.35rem .6rem;font-size:.88rem;cursor:pointer;background:var(--branco)}
+.interruptor{display:flex;justify-content:space-between;gap:1rem;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--linha)}
+.interruptor:last-child{border-bottom:0}
+.interruptor p{margin:.1rem 0 0;font-size:.85rem;color:var(--texto-2)}
+.interruptor input{width:44px;height:24px;appearance:none;background:#c5cfd8;border-radius:999px;position:relative;cursor:pointer;flex:none;transition:background .15s}
+.interruptor input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.interruptor input:checked{background:var(--ok)}
+.interruptor input:checked::after{left:23px}
+.interruptor.perigo input:checked{background:var(--erro)}
+
+/* Avisos rápidos */
+#avisos{position:fixed;top:1rem;right:1rem;z-index:100;display:flex;flex-direction:column;gap:.5rem;max-width:min(380px,calc(100vw - 2rem))}
+.toast{background:var(--tinta);color:#fff;padding:.7rem 1rem;border-radius:var(--r2);box-shadow:var(--sombra);font-size:.9rem;animation:entra .2s ease-out}
+.toast.erro{background:var(--erro)} .toast.ok{background:var(--ok)}
+@keyframes entra{from{opacity:0;transform:translateY(-6px)}}
+</style>
 </head>
 <body>
 
-  <!-- ============ LOGIN ============ -->
-  <section id="login" class="login">
-    <div class="login-grid" aria-hidden="true"></div>
-    <div class="login-scan" aria-hidden="true"></div>
-    <form id="loginForm" class="login-card glass" autocomplete="on">
-      <img src="assets/logo.png" alt="Vegas Vigilância e Segurança" class="logo login-logo">
-      <h1 class="login-title">SDR Control</h1>
-      <p class="login-sub">Gestão de clientes, orçamentos e visitas</p>
-      <label class="field">
-        <span>Usuário</span>
-        <input id="loginUser" name="username" autocomplete="username" required>
-      </label>
-      <label class="field">
-        <span>Senha</span>
-        <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
-      </label>
-      <p id="loginError" class="login-error" role="alert"></p>
-      <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+<!-- ============================ LOGIN ============================ -->
+<section id="telaLogin" hidden>
+  <div class="login-marca">
+    <div>
+      <p style="color:#e3a008;font-weight:600;margin:0 0 1rem">Vegas Vigilância e Segurança</p>
+      <h1>Cada orçamento acompanhado até o fim.</h1>
+      <p>Leads, propostas de câmeras, alarmes e rastreamento, e os próximos contatos da equipe comercial em um só lugar.</p>
+    </div>
+    <p class="peq" style="color:#7f95aa">Acesso restrito à equipe da empresa.</p>
+    <div class="radar" aria-hidden="true"></div>
+  </div>
+  <div class="login-form">
+    <form id="formLogin" novalidate>
+      <h2>Entrar no CRM</h2>
+      <div id="avisoUrl" class="aviso erro" hidden>Falta configurar o endereço do sistema: abra o index.html e cole a URL do App da Web na constante <b>API_URL</b>.</div>
+      <label class="campo">Login<input class="inp" name="email" autocomplete="username" required></label>
+      <label class="campo">Senha<input class="inp" name="senha" type="password" autocomplete="current-password" required></label>
+      <div id="erroLogin" class="aviso erro" hidden></div>
+      <button class="btn pri" type="submit">Entrar</button>
     </form>
-  </section>
-
-  <!-- ============ APP ============ -->
-  <div id="app" class="app" hidden>
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <img src="assets/logo.png" alt="Vegas" class="logo">
-        <span>SDR Control</span>
-      </div>
-      <nav class="nav" id="nav">
-        <a data-view="dashboard"><i>🏠</i><span>Dashboard</span></a>
-        <a data-view="clientes"><i>👥</i><span>Clientes</span></a>
-        <a data-view="oportunidades"><i>📋</i><span>Oportunidades</span></a>
-        <a data-view="agenda"><i>📅</i><span>Agenda de visitas</span></a>
-        <a data-view="visitas"><i>🧭</i><span>Minhas visitas</span></a>
-        <a data-view="orcamentos"><i>💰</i><span>Orçamentos</span></a>
-        <a data-view="relatorios"><i>📄</i><span>PDFs / Relatórios</span></a>
-        <a data-view="sdrs"><i>👩‍💼</i><span>SDRs</span></a>
-        <a data-view="indicadores"><i>📊</i><span>Indicadores</span></a>
-        <a data-view="config"><i>⚙️</i><span>Configurações</span></a>
-      </nav>
-      <div class="sidebar-foot">Vegas Vigilância e Segurança</div>
-    </aside>
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-    <div class="main">
-      <header class="topbar">
-        <button class="icon-btn only-mobile" id="menuBtn" aria-label="Abrir menu">☰</button>
-        <div class="search">
-          <input id="globalSearch" type="search" placeholder="Buscar cliente, telefone, empresa, endereço, SDR ou nº do orçamento">
-          <div id="searchResults" class="search-results glass" hidden></div>
-        </div>
-        <div class="topbar-right">
-          <span id="syncChip" class="sync-chip" hidden></span>
-          <div class="clock hide-mobile">
-            <span id="clockDate"></span>
-            <b id="clockTime"></b>
-          </div>
-          <button class="icon-btn" id="themeBtn" aria-label="Alternar tema">🌙</button>
-          <button class="icon-btn" id="notifBtn" aria-label="Notificações">🔔<em id="notifCount" hidden>0</em></button>
-          <div class="user-chip hide-mobile">
-            <span class="avatar" id="userAvatar">A</span>
-            <div><b id="userName"></b><small id="userRole"></small></div>
-          </div>
-          <button class="icon-btn" id="logoutBtn" aria-label="Sair" title="Sair">⏻</button>
-        </div>
-        <div id="notifPanel" class="notif-panel glass" hidden></div>
-      </header>
-
-      <div class="quickbar">
-        <button class="btn btn-primary" data-action="novoCliente">+ Novo cliente</button>
-        <button class="btn" data-action="novaVisita">+ Agendar visita</button>
-        <button class="btn" data-action="novoOrcamento">+ Novo orçamento</button>
-        <button class="btn" data-action="relatorio">Gerar relatório</button>
-      </div>
-
-      <main id="view" class="view" tabindex="-1"></main>
-    </div>
-
-    <nav class="bottomnav only-mobile">
-      <a data-view="dashboard"><i>🏠</i>Início</a>
-      <a data-view="clientes"><i>👥</i>Clientes</a>
-      <button class="fab" id="fabBtn" aria-label="Ações rápidas">+</button>
-      <a data-view="agenda"><i>📅</i>Agenda</a>
-      <a data-view="orcamentos"><i>💰</i>Orçam.</a>
-    </nav>
-    <div class="fab-menu glass" id="fabMenu" hidden>
-      <button data-action="novoCliente">👤 Novo cliente</button>
-      <button data-action="novaVisita">📅 Agendar visita</button>
-      <button data-action="novoOrcamento">💰 Novo orçamento</button>
-      <button data-action="relatorio">📄 Gerar relatório</button>
-    </div>
   </div>
+</section>
 
-  <!-- ============ MODAL / TOAST ============ -->
-  <div id="modal" class="modal" hidden>
-    <div class="modal-box glass" role="dialog" aria-modal="true">
-      <header class="modal-head">
-        <h2 id="modalTitle"></h2>
-        <button class="icon-btn" data-close aria-label="Fechar">✕</button>
-      </header>
-      <div id="modalBody" class="modal-body"></div>
+<!-- ============================ APP ============================ -->
+<div id="app" hidden>
+  <aside class="lateral">
+    <div class="marca">CRM Vegas<small>Vegas Vigilância e Segurança</small></div>
+    <nav class="nav" id="nav" aria-label="Menu principal"></nav>
+    <div class="rodape" id="quemSou"></div>
+  </aside>
+  <main>
+    <div class="faixas" id="faixas"></div>
+    <div id="vista"></div>
+    <p class="rodape-app">Vegas Vigilância e Segurança · CRM de leads e orçamentos</p>
+  </main>
+</div>
+
+<!-- ============================ DIÁLOGOS ============================ -->
+<dialog id="dlgLead" aria-label="Detalhes do lead"><div class="dlg" id="dlgLeadConteudo"></div></dialog>
+<dialog id="dlgForm"><form id="formDlg" novalidate></form></dialog>
+<div id="avisos" role="status" aria-live="polite"></div>
+
+<script>
+/* =========================================================================
+   CONFIGURAÇÃO — cole aqui a URL do App da Web do Apps Script (termina em /exec)
+   ========================================================================= */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyLInNnttMBYvxZQDwHHVoCkNWsD_d79mVuYKVdN3zet9Fc_ZhO46aJ4TDGytLSBMor/exec';
+
+/* ========================================================================= */
+const S = { token: null, usuario: null, listas: {}, config: {}, vendedores: [], filaPendentes: 0, leadAberto: null, filtrosLeads: {}, filtrosPainel: {}, filaStatus: 'AGUARDANDO_APROVACAO' };
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ehAdmin = () => S.usuario && S.usuario.perfil === 'admin';
+const moeda = n => (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const dataBR = s => { if (!s) return '—'; const d = String(s).slice(0, 10).split('-'); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : '—'; };
+const dataHora = iso => { if (!iso) return '—'; const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+const hojeYmd = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const somaDias = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const tel = t => { const d = String(t || '').replace(/\D/g, ''); if (d.length === 13 && d.startsWith('55')) return `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`; if (d.length === 12 && d.startsWith('55')) return `(${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`; return d ? '+' + d : '—'; };
+const opcoes = (lista, sel, vazio) => (vazio !== undefined ? `<option value="">${esc(vazio)}</option>` : '') + lista.map(o => { const v = typeof o === 'object' ? o.v : o, t = typeof o === 'object' ? o.t : o; return `<option value="${esc(v)}" ${String(v) === String(sel ?? '') ? 'selected' : ''}>${esc(t)}</option>`; }).join('');
+
+const ROTULO_FILA = { AGUARDANDO_APROVACAO: 'Aguardando aprovação', PENDENTE: 'Agendada', ENVIANDO: 'Enviando', ENVIADO: 'Enviada', SIMULADO: 'Simulada (teste)', FALHA: 'Falhou', CANCELADO: 'Cancelada', VERIFICAR: 'Verificar' };
+const COR_FILA = { AGUARDANDO_APROVACAO: 'sinal', PENDENTE: 'info', ENVIANDO: 'info', ENVIADO: 'ok', SIMULADO: 'ok', FALHA: 'erro', CANCELADO: '', VERIFICAR: 'atraso' };
+const COR_LEAD = { 'Novo': 'info', 'Em contato': 'info', 'Orçamento enviado': 'sinal', 'Negociação': 'sinal', 'Ganho': 'ok', 'Perdido': '' };
+const COR_ORC = { 'Em preparação': '', 'Enviado': 'info', 'Aguardando resposta': 'sinal', 'Negociação': 'sinal', 'Aprovado': 'ok', 'Recusado': 'erro', 'Expirado': '' };
+const ENTREGA = { accepted: 'aceita pela Meta', sent: 'enviada', delivered: 'entregue', read: 'lida', failed: 'falhou', simulado: 'simulada' };
+const pill = (txt, cor) => `<span class="pill ${cor || ''}">${esc(txt)}</span>`;
+
+/* ---------------------------- Comunicação ---------------------------- */
+async function api(action, dados = {}) {
+  if (!API_URL || API_URL.includes('COLE_AQUI')) throw new Error('A URL do sistema não foi configurada no index.html (API_URL).');
+  let resp;
+  try {
+    resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, dados, token: S.token }) });
+  } catch (e) { throw new Error('Sem conexão com o servidor. Verifique a internet e tente de novo.'); }
+  let j;
+  try { j = await resp.json(); } catch (e) { throw new Error('O servidor respondeu de forma inesperada. Confira se a implantação do App da Web está como "Qualquer pessoa".'); }
+  if (!j.ok) {
+    if (j.erro === 'SESSAO_EXPIRADA') { sair(true); throw new Error('Sua sessão expirou. Entre novamente.'); }
+    const e = new Error(j.erro); e.extra = j.extra; throw e;
+  }
+  return j.dados;
+}
+
+function aviso(msg, tipo = '') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + tipo; t.textContent = msg;
+  $('#avisos').appendChild(t);
+  setTimeout(() => t.remove(), tipo === 'erro' ? 7000 : 3500);
+}
+
+/** Executa uma ação sem travar a tela: só o botão clicado mostra o carregamento. */
+async function acao(btn, fn, msgOk) {
+  if (btn && btn.disabled) return;
+  const original = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="giro" aria-hidden="true"></span>' + original; }
+  try { const r = await fn(); if (msgOk) aviso(msgOk, 'ok'); return r; }
+  catch (e) { aviso(e.message, 'erro'); throw e; }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = original; } }
+}
+
+/* ---------------------------- Sessão ---------------------------- */
+function mostrarLogin() {
+  $('#app').hidden = true; $('#telaLogin').hidden = false;
+  $('#avisoUrl').hidden = !(API_URL.includes('COLE_AQUI'));
+  setTimeout(() => $('#formLogin [name=email]').focus(), 50);
+}
+function sair(silencioso) {
+  if (S.token && !silencioso) api('logout').catch(() => {});
+  S.token = null; S.usuario = null;
+  try { localStorage.removeItem('crmVegasToken'); } catch (e) {}
+  $$('dialog[open]').forEach(d => d.close());
+  mostrarLogin();
+}
+$('#formLogin').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const f = ev.target, btn = $('button[type=submit]', f);
+  $('#erroLogin').hidden = true;
+  try {
+    const r = await acao(btn, () => api('login', { email: f.email.value, senha: f.senha.value }));
+    iniciar(r);
+  } catch (e) { $('#erroLogin').textContent = e.message; $('#erroLogin').hidden = false; }
+});
+
+async function iniciar(r) {
+  if (r.token) { S.token = r.token; try { localStorage.setItem('crmVegasToken', r.token); } catch (e) {} }
+  S.usuario = r.usuario; S.listas = r.listas; S.config = r.config;
+  $('#telaLogin').hidden = true; $('#app').hidden = false;
+  $('#quemSou').innerHTML = `${esc(S.usuario.nome)}<br>${ehAdmin() ? 'Administrador' : 'Vendedor'}`;
+  montarMenu(); faixas();
+  try { S.vendedores = await api('listarVendedores'); } catch (e) { S.vendedores = []; }
+  if (!location.hash) location.hash = '#painel'; else rotear();
+  atualizarContadorFila();
+}
+
+/* ---------------------------- Menu e rotas ---------------------------- */
+const ICONES = {
+  painel: '<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+  leads: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M17 11a3 3 0 1 0 0-6M22 21c0-3-2-5.5-5-6"/>',
+  fila: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5M12 7v5l3 2"/>',
+  ajustes: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  conta: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>'
+};
+function montarMenu() {
+  const itens = [['painel', 'Painel'], ['leads', 'Leads'], ['fila', 'Mensagens']];
+  if (ehAdmin()) itens.push(['ajustes', 'Ajustes']);
+  itens.push(['conta', 'Conta']);
+  $('#nav').innerHTML = itens.map(([k, t]) => `<a href="#${k}" data-k="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[k]}</svg><span>${t}</span>${k === 'fila' ? '<span class="badge" id="badgeFila" hidden></span>' : ''}</a>`).join('');
+}
+function faixas() {
+  const f = [];
+  if (S.config.MODO_TESTE === 'SIM') f.push(`<div class="faixa"><b>Modo teste ligado.</b> Os acompanhamentos são apenas simulados: nenhuma mensagem real é enviada.${ehAdmin() ? ' <a href="#ajustes/envios">Configurar integração</a>' : ''}</div>`);
+  if (S.config.ENVIOS_PAUSADOS === 'SIM') f.push(`<div class="faixa erro"><b>Envios pausados.</b> O bloqueio geral está ativo e nenhuma mensagem automática sai.${ehAdmin() ? ' <a href="#ajustes/envios">Alterar</a>' : ''}</div>`);
+  $('#faixas').innerHTML = f.join('');
+}
+async function atualizarContadorFila() {
+  if (!ehAdmin()) return;
+  try {
+    const r = await api('listarFila', { status: 'AGUARDANDO_APROVACAO' });
+    const n = r.contagem.AGUARDANDO_APROVACAO || 0;
+    const b = $('#badgeFila'); if (b) { b.textContent = n; b.hidden = !n; b.title = n + ' aguardando aprovação'; }
+  } catch (e) {}
+}
+window.addEventListener('hashchange', rotear);
+function rotear() {
+  if (!S.token) return;
+  const [rota, sub] = location.hash.replace('#', '').split('/');
+  $$('#nav a').forEach(a => a.toggleAttribute('aria-current', false));
+  const ativo = $(`#nav a[data-k="${rota}"]`); if (ativo) ativo.setAttribute('aria-current', 'page');
+  const v = { painel: vistaPainel, leads: vistaLeads, fila: vistaFila, ajustes: vistaAjustes, conta: vistaConta }[rota] || vistaPainel;
+  if (rota === 'ajustes' && !ehAdmin()) return vistaPainel();
+  v(sub);
+  window.scrollTo(0, 0);
+}
+const vista = html => { $('#vista').innerHTML = html; };
+const carregando = (el, txt = 'Carregando…') => { (typeof el === 'string' ? $(el) : el).innerHTML = `<div class="carregando">${txt}</div>`; };
+const campoVendedor = (sel, vazio = 'Todos os vendedores') => ehAdmin() ? `<label class="campo">Vendedor<select class="inp" name="responsavelId">${opcoes(S.vendedores.map(v => ({ v: v.id, t: v.nome })), sel, vazio)}</select></label>` : '';
+
+/* =========================================================================
+   PAINEL
+   ========================================================================= */
+async function vistaPainel() {
+  const f = S.filtrosPainel;
+  const hoje = hojeYmd();
+  vista(`
+    <div class="cabecalho"><div><h1>Painel comercial</h1><p class="mudo">Olá, ${esc(S.usuario.nome.split(' ')[0])}. Estes são os números e os próximos contatos ${ehAdmin() ? 'da equipe' : 'da sua carteira'}.</p></div>
+      <button class="btn pri" id="btnNovoLeadP">Novo lead</button></div>
+    <form class="filtros" id="filtrosPainel">
+      <label class="campo">De<input class="inp" type="date" name="de" value="${esc(f.de || hoje.slice(0, 8) + '01')}"></label>
+      <label class="campo">Até<input class="inp" type="date" name="ate" value="${esc(f.ate || hoje)}"></label>
+      ${campoVendedor(f.responsavelId)}
+      <label class="campo">Serviço<select class="inp" name="servico">${opcoes(S.listas.servico, f.servico, 'Todos')}</select></label>
+      <label class="campo">Status<select class="inp" name="status">${opcoes(S.listas.statusLead, f.status, 'Todos')}</select></label>
+      <label class="campo">Origem<select class="inp" name="origem">${opcoes(S.listas.origem, f.origem, 'Todas')}</select></label>
+    </form>
+    <div id="painelConteudo"><div class="carregando">Carregando indicadores…</div></div>`);
+  $('#btnNovoLeadP').onclick = () => abrirFormLead();
+  $('#filtrosPainel').addEventListener('change', e => { S.filtrosPainel = Object.fromEntries(new FormData(e.currentTarget)); carregarPainel(); });
+  S.filtrosPainel = Object.fromEntries(new FormData($('#filtrosPainel')));
+  carregarPainel();
+}
+async function carregarPainel() {
+  const alvo = $('#painelConteudo'); if (!alvo) return;
+  try {
+    const d = await api('dashboard', S.filtrosPainel);
+    S.config = d.config; faixas();
+    if (!$('#painelConteudo')) return;
+    const k = d.kpis;
+    const n = (rot, val, cls = '') => `<div class="${cls}"><dt>${rot}</dt><dd>${val}</dd></div>`;
+    const maxStatus = Math.max(1, ...Object.values(d.porStatus));
+    const filaItens = [['AGUARDANDO_APROVACAO'], ['PENDENTE'], ['ENVIADO'], ['SIMULADO'], ['FALHA'], ['VERIFICAR'], ['CANCELADO']];
+    alvo.innerHTML = `
+      <dl class="numeros" style="margin:0">
+        ${n('Leads ativos e encerrados', k.totalLeads)}${n('Novos no período', k.novos)}${n('Orçamentos enviados no período', k.orcEnviados)}
+        ${n('Aguardando resposta', k.orcAguardando)}${n('Contatos para hoje', k.contatosHoje)}${n('Contatos atrasados', k.atrasados, k.atrasados ? 'alerta' : '')}
+        ${n('Negócios fechados', k.fechados)}${n('Leads perdidos', k.perdidos)}${n('Taxa de conversão', k.conversao.toLocaleString('pt-BR') + '%')}
+        ${n('Em aberto (orçamentos)', moeda(k.valorAberto), 'dinheiro')}${n('Fechado no período', moeda(k.valorFechado), 'dinheiro')}${n('Leads sem próximo contato', k.semAgenda, k.semAgenda ? 'alerta' : '')}
+      </dl>
+      <div class="painel-grade">
+        <section class="bloco"><h2>Próximos contatos</h2>${ronda(d.proximos, d.hoje)}</section>
+        <div>
+          <section class="bloco"><h2>Mensagens automáticas</h2>
+            <div class="fila-resumo">${filaItens.map(([s]) => `<a href="#fila" data-st="${s}">${ROTULO_FILA[s]} <b>${d.fila[s] || 0}</b></a>`).join('')}</div>
+          </section>
+          <section class="bloco"><h2>Leads por etapa</h2>
+            <div class="barras">${Object.entries(d.porStatus).map(([s, q]) => `<div class="barra ${esc(s)}"><span>${esc(s)}</span><i style="width:${q / maxStatus * 100}%"></i><span>${q}</span></div>`).join('')}</div>
+          </section>
+        </div>
+      </div>`;
+    $$('.fila-resumo a', alvo).forEach(a => a.onclick = () => { S.filaStatus = a.dataset.st; });
+    $$('.parada', alvo).forEach(b => b.onclick = () => abrirLead(b.dataset.id));
+  } catch (e) { alvo.innerHTML = `<div class="bloco vazio"><strong>Não foi possível carregar o painel.</strong>${esc(e.message)}</div>`; }
+}
+function ronda(lista, hoje) {
+  if (!lista.length) return `<div class="vazio"><strong>Nenhum contato agendado para os próximos 7 dias.</strong>Ao enviar um orçamento ou registrar um contato com data, ele aparece aqui.</div>`;
+  const grupos = {};
+  lista.forEach(l => { const k = l.atrasado ? 'atrasado' : l.proximoContato; (grupos[k] = grupos[k] || []).push(l); });
+  const semana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  return '<div class="ronda">' + Object.keys(grupos).sort((a, b) => a === 'atrasado' ? -1 : b === 'atrasado' ? 1 : a < b ? -1 : 1).map(k => {
+    let titulo, sub, cls = '';
+    if (k === 'atrasado') { titulo = 'Atrasados'; sub = grupos[k].length + ' contato(s)'; cls = 'atrasado'; }
+    else if (k === hoje) { titulo = 'Hoje'; sub = dataBR(k); cls = 'hoje'; }
+    else if (k === somaDias(hoje, 1)) { titulo = 'Amanhã'; sub = dataBR(k); }
+    else { const [y, m, d] = k.split('-').map(Number); titulo = semana[new Date(y, m - 1, d).getDay()]; titulo = titulo[0].toUpperCase() + titulo.slice(1); sub = dataBR(k); }
+    return `<div class="ronda-dia ${cls}"><div class="ronda-data">${titulo}<small>${sub}</small></div><div class="ronda-lista">${grupos[k].map(l => `
+      <button class="parada" data-id="${esc(l.id)}"><b>${esc(l.nome)}</b><span class="meta">${esc(l.servico)}${k === 'atrasado' ? ' · desde ' + dataBR(l.proximoContato) : ''}</span>
+      <span class="acao">${esc(l.acao[0].toUpperCase() + l.acao.slice(1))} · último contato ${dataBR(l.ultimoContato)}${ehAdmin() ? ' · ' + esc(l.responsavelNome) : ''}</span></button>`).join('')}</div></div>`;
+  }).join('') + '</div>';
+}
+
+/* =========================================================================
+   LEADS
+   ========================================================================= */
+let tBusca;
+function vistaLeads() {
+  const f = S.filtrosLeads;
+  vista(`
+    <div class="cabecalho"><div><h1>Leads</h1><p class="mudo">Pessoas e empresas que pediram informação ou orçamento.</p></div>
+      <button class="btn pri" id="btnNovoLead">Novo lead</button></div>
+    <form class="filtros" id="filtrosLeads" onsubmit="return false">
+      <label class="campo busca">Pesquisar<input class="inp" type="search" name="busca" placeholder="Nome, telefone, e-mail ou nº do orçamento" value="${esc(f.busca || '')}"></label>
+      <label class="campo">Status<select class="inp" name="status">${opcoes(S.listas.statusLead, f.status, 'Todos')}</select></label>
+      <label class="campo">Serviço<select class="inp" name="servico">${opcoes(S.listas.servico, f.servico, 'Todos')}</select></label>
+      <label class="campo">Origem<select class="inp" name="origem">${opcoes(S.listas.origem, f.origem, 'Todas')}</select></label>
+      ${campoVendedor(f.responsavelId)}
+      <label class="check" style="align-self:center"><input type="checkbox" name="arquivados" ${f.arquivados ? 'checked' : ''}> Ver arquivados</label>
+    </form>
+    <section class="bloco" id="listaLeads"><div class="carregando">Carregando leads…</div></section>`);
+  $('#btnNovoLead').onclick = () => abrirFormLead();
+  const form = $('#filtrosLeads');
+  const ler = () => { const o = Object.fromEntries(new FormData(form)); o.arquivados = form.arquivados.checked; S.filtrosLeads = o; carregarLeads(); };
+  form.addEventListener('change', ler);
+  form.busca.addEventListener('input', () => { clearTimeout(tBusca); tBusca = setTimeout(ler, 350); });
+  carregarLeads();
+}
+async function carregarLeads() {
+  const alvo = $('#listaLeads'); if (!alvo) return;
+  try {
+    const lista = await api('listarLeads', S.filtrosLeads);
+    if (!$('#listaLeads')) return;
+    if (!lista.length) { alvo.innerHTML = `<div class="vazio"><strong>Nenhum lead encontrado.</strong>Ajuste os filtros ou cadastre o primeiro contato com o botão “Novo lead”.</div>`; return; }
+    const hoje = hojeYmd();
+    alvo.innerHTML = `<p class="mudo peq" style="margin:0 0 .5rem">${lista.length} lead(s)${lista.length >= 500 ? ' — mostrando os 500 mais recentes; use os filtros' : ''}</p>
+      <div class="tabela-wrap"><table class="tab"><thead><tr><th>Cliente</th><th>Serviço</th><th>Status</th><th>Último contato</th><th>Próximo contato</th><th>Em aberto</th>${ehAdmin() ? '<th>Vendedor</th>' : ''}</tr></thead><tbody>
+      ${lista.map(l => `<tr class="clicavel" data-id="${esc(l.id)}" tabindex="0">
+        <td data-r=""><span class="nome">${esc(l.nome)}</span><br><span class="mudo peq">${tel(l.telefone)} · ${esc(l.tipoCliente)}${l.bloqueado === 'SIM' ? ' · <span style="color:var(--erro)">envios bloqueados</span>' : ''}</span></td>
+        <td data-r="Serviço">${esc(l.servico)}</td>
+        <td data-r="Status">${pill(l.status, COR_LEAD[l.status])}</td>
+        <td data-r="Último contato" class="num">${dataBR(l.ultimoContato)}</td>
+        <td data-r="Próximo contato" class="num" ${l.proximoContato && l.proximoContato < hoje && !['Ganho', 'Perdido'].includes(l.status) ? 'style="color:var(--atraso);font-weight:600"' : ''}>${dataBR(l.proximoContato)}</td>
+        <td data-r="Em aberto" class="num">${l.valorAberto ? moeda(l.valorAberto) : '—'}</td>
+        ${ehAdmin() ? `<td data-r="Vendedor">${esc(l.responsavelNome)}</td>` : ''}</tr>`).join('')}
+      </tbody></table></div>`;
+    $$('tr.clicavel', alvo).forEach(tr => { tr.onclick = () => abrirLead(tr.dataset.id); tr.onkeydown = e => { if (e.key === 'Enter') abrirLead(tr.dataset.id); }; });
+  } catch (e) { alvo.innerHTML = `<div class="vazio"><strong>Não foi possível carregar os leads.</strong>${esc(e.message)}</div>`; }
+}
+
+/* ---------------------------- Formulário de lead ---------------------------- */
+function abrirDialogo(titulo, corpo, rodape, aoEnviar) {
+  const f = $('#formDlg');
+  f.innerHTML = `<div class="dlg-cab"><h2>${titulo}</h2><button type="button" class="fechar" aria-label="Fechar">×</button></div>
+    <div class="dlg-corpo">${corpo}</div><div class="dlg-pe">${rodape}</div>`;
+  $('.fechar', f).onclick = () => $('#dlgForm').close();
+  $$('[data-cancelar]', f).forEach(b => b.onclick = () => $('#dlgForm').close());
+  f.onsubmit = async ev => {
+    ev.preventDefault();
+    const btn = $('button[type=submit]', f);
+    try { await acao(btn, () => aoEnviar(f)); } catch (e) { /* aviso já exibido */ }
+  };
+  $('#dlgForm').showModal();
+  const primeiro = $('input:not([type=hidden]),select,textarea', f); if (primeiro) primeiro.focus();
+  return f;
+}
+const rodapePadrao = (txt = 'Salvar') => `<button type="button" class="btn" data-cancelar>Cancelar</button><button type="submit" class="btn pri">${txt}</button>`;
+
+function abrirFormLead(l = null) {
+  const novo = !l; l = l || { dataSolicitacao: hojeYmd(), status: 'Novo', consentimento: 'NAO' };
+  const f = abrirDialogo(novo ? 'Novo lead' : 'Editar lead', `
+    <div class="grade">
+      <label class="campo larga">Nome completo<input class="inp" name="nome" required maxlength="120" value="${esc(l.nome)}"></label>
+      <label class="campo">Telefone / WhatsApp<input class="inp" name="telefone" required inputmode="tel" placeholder="(24) 99999-9999" value="${esc(l.telefone ? tel(l.telefone) : '')}"></label>
+      <label class="campo">E-mail<input class="inp" name="email" type="email" value="${esc(l.email)}"></label>
+      <label class="campo">Tipo de cliente<select class="inp" name="tipoCliente" required>${opcoes(S.listas.tipoCliente, l.tipoCliente, 'Selecione')}</select></label>
+      <label class="campo">Serviço de interesse<select class="inp" name="servico" required>${opcoes(S.listas.servico, l.servico, 'Selecione')}</select></label>
+      <label class="campo">Origem do contato<select class="inp" name="origem" required>${opcoes(S.listas.origem, l.origem, 'Selecione')}</select></label>
+      <label class="campo">Data da solicitação<input class="inp" type="date" name="dataSolicitacao" value="${esc(l.dataSolicitacao)}"></label>
+      <label class="campo larga">Endereço ou região de atendimento<input class="inp" name="endereco" maxlength="200" value="${esc(l.endereco)}"></label>
+      <label class="campo larga">O que o cliente precisa<textarea class="inp" name="necessidade" maxlength="2000">${esc(l.necessidade)}</textarea></label>
+      <label class="campo">Valor estimado (R$)<input class="inp" name="valorEstimado" inputmode="decimal" value="${l.valorEstimado && Number(l.valorEstimado) ? esc(Number(l.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : ''}"></label>
+      <label class="campo">Próximo contato<input class="inp" type="date" name="proximoContato" value="${esc(l.proximoContato)}"></label>
+      <label class="campo">Status<select class="inp" name="status">${opcoes(S.listas.statusLead, l.status)}</select></label>
+      ${ehAdmin() ? `<label class="campo">Responsável comercial<select class="inp" name="responsavelId">${opcoes(S.vendedores.map(v => ({ v: v.id, t: v.nome })), l.responsavelId || S.usuario.id)}</select></label>` : ''}
     </div>
-  </div>
-  <div id="toasts" class="toasts" aria-live="polite"></div>
+    <fieldset><legend>Autorização para mensagens pelo WhatsApp</legend>
+      <label class="check"><input type="checkbox" name="consentimento" ${l.consentimento === 'SIM' ? 'checked' : ''} ${l.optout === 'SIM' ? 'disabled' : ''}>
+        <span>O cliente autorizou receber mensagens de acompanhamento deste orçamento pelo WhatsApp. <span class="mudo">Finalidade: acompanhamento comercial da proposta solicitada. O cliente pode pedir para parar a qualquer momento.</span></span></label>
+      ${l.optout === 'SIM' ? '<p class="aviso erro" style="margin:.6rem 0 0">Este número está na lista de não contatar.</p>' : ''}
+      <div class="grade" style="margin-top:.8rem" id="blocoConsent">
+        <label class="campo">Como autorizou<select class="inp" name="consentimentoOrigem">${opcoes(S.listas.origemConsentimento, l.consentimentoOrigem, 'Selecione')}</select></label>
+        <label class="campo">Data da autorização<input class="inp" type="date" name="consentimentoData" value="${esc(String(l.consentimentoData || '').slice(0, 10) || hojeYmd())}"></label>
+      </div>
+    </fieldset>
+    <div id="erroLead" class="aviso erro" style="margin-top:1rem" hidden></div>`,
+    rodapePadrao(novo ? 'Cadastrar lead' : 'Salvar alterações'),
+    async form => {
+      const d = Object.fromEntries(new FormData(form));
+      d.consentimento = form.consentimento.checked ? 'SIM' : 'NAO';
+      if (!novo) d.id = l.id;
+      $('#erroLead').hidden = true;
+      try {
+        const r = await api('salvarLead', d);
+        $('#dlgForm').close();
+        aviso(novo ? 'Lead cadastrado.' : 'Alterações salvas.', 'ok');
+        aposMudanca(r.id, true);
+      } catch (e) {
+        const box = $('#erroLead');
+        box.innerHTML = esc(e.message) + (e.extra && e.extra.duplicadoId ? ` <button type="button" class="btn peq" id="abrirDup">Abrir cadastro existente</button>` : '');
+        box.hidden = false;
+        const b = $('#abrirDup'); if (b) b.onclick = () => { $('#dlgForm').close(); abrirLead(e.extra.duplicadoId); };
+        throw e;
+      }
+    });
+  const sync = () => { $('#blocoConsent').hidden = !f.consentimento.checked; };
+  f.consentimento.onchange = sync; sync();
+}
 
-  <script src="assets/vendor/jspdf.umd.min.js"></script>
-  <script src="assets/vendor/jspdf.plugin.autotable.min.js"></script>
-  <script src="assets/logo-data.js"></script>
-  <script src="config.js"></script>
-  <script src="script.js"></script>
+/* ---------------------------- Painel do lead ---------------------------- */
+async function abrirLead(id, aba = 'resumo') {
+  S.leadAberto = id;
+  const dlg = $('#dlgLead');
+  carregando('#dlgLeadConteudo', 'Abrindo cadastro…');
+  if (!dlg.open) dlg.showModal();
+  try {
+    const d = await api('obterLead', { id });
+    if (S.leadAberto !== id) return;
+    desenharLead(d, aba);
+  } catch (e) {
+    $('#dlgLeadConteudo').innerHTML = `<div class="dlg-cab"><h2>Lead</h2><button class="fechar" onclick="this.closest('dialog').close()" aria-label="Fechar">×</button></div><div class="vazio">${esc(e.message)}</div>`;
+  }
+}
+$('#dlgLead').addEventListener('close', () => { S.leadAberto = null; });
+
+function desenharLead(d, aba) {
+  const l = d.lead, anon = l.anonimizado === 'SIM';
+  const temPend = d.mensagens.some(m => ['AGUARDANDO_APROVACAO', 'PENDENTE'].includes(m.status));
+  const wa = l.telefone ? `https://wa.me/${l.telefone}` : '';
+  const c = $('#dlgLeadConteudo');
+  c.innerHTML = `
+    <div class="lead-topo">
+      <div class="linha1"><div><h2 style="font-size:1.45rem">${esc(l.nome)}</h2>
+        <div class="mudo">${tel(l.telefone)}${l.email ? ' · ' + esc(l.email) : ''}</div></div>
+        <button class="fechar" aria-label="Fechar">×</button></div>
+      <div class="selos">${pill(l.status, COR_LEAD[l.status])}
+        ${l.consentimento === 'SIM' ? pill('Autorizou WhatsApp', 'ok') : pill('Sem autorização para WhatsApp automático', '')}
+        ${l.bloqueado === 'SIM' ? pill('Envios bloqueados', 'erro') : ''}${l.optout === 'SIM' ? pill('Não contatar', 'erro') : ''}
+        ${l.arquivado === 'SIM' ? pill('Arquivado', '') : ''}${temPend ? pill('Acompanhamento automático ativo', 'info') : ''}</div>
+      ${anon ? '<p class="aviso">Dados anonimizados a pedido do titular (LGPD). O histórico de ações foi preservado sem dados pessoais.</p>' : `
+      <div class="acoes">
+        <button class="btn pri peq" data-a="contato">Registrar contato</button>
+        <button class="btn peq" data-a="orcamento">Novo orçamento</button>
+        <button class="btn peq" data-a="editar">Editar</button>
+        ${wa ? `<a class="btn peq" href="${wa}" target="_blank" rel="noopener">Abrir conversa no WhatsApp</a>` : ''}
+        ${temPend ? '<button class="btn peq" data-a="respondeu">Cliente respondeu</button>' : ''}
+        ${l.bloqueado === 'SIM' ? '<button class="btn peq" data-a="desbloquear">Desbloquear envios</button>' : '<button class="btn peq perigo" data-a="bloquear">Bloquear envios</button>'}
+        ${l.optout !== 'SIM' ? '<button class="btn peq perigo" data-a="optout">Não quer receber mensagens</button>' : ''}
+        <button class="btn peq discreto" data-a="arquivar">${l.arquivado === 'SIM' ? 'Reativar' : 'Arquivar'}</button>
+        ${ehAdmin() ? '<button class="btn peq discreto perigo" data-a="anonimizar">Anonimizar (LGPD)</button>' : ''}
+      </div>`}
+      <div class="abas" role="tablist">
+        ${[['resumo', 'Resumo'], ['orcamentos', `Orçamentos (${d.orcamentos.length})`], ['mensagens', `Mensagens (${d.mensagens.length})`], ['historico', 'Histórico']].map(([k, t]) => `<button role="tab" data-aba="${k}" aria-selected="${k === aba}">${t}</button>`).join('')}
+      </div>
+    </div>
+    <div class="dlg-corpo" id="leadAba"></div>`;
+  $('.fechar', c).onclick = () => $('#dlgLead').close();
+  $$('[data-aba]', c).forEach(b => b.onclick = () => { $$('[data-aba]', c).forEach(x => x.setAttribute('aria-selected', x === b)); abaLead(d, b.dataset.aba); });
+  $$('[data-a]', c).forEach(b => b.onclick = () => acaoLead(b, d));
+  abaLead(d, aba);
+}
+
+function abaLead(d, aba) {
+  const l = d.lead, alvo = $('#leadAba');
+  if (aba === 'resumo') {
+    const it = (r, v, larga) => `<div class="${larga ? 'larga' : ''}"><dt>${r}</dt><dd>${v || '—'}</dd></div>`;
+    alvo.innerHTML = `<dl class="dados">
+      ${it('Tipo de cliente', esc(l.tipoCliente))}${it('Serviço de interesse', esc(l.servico))}${it('Origem', esc(l.origem))}
+      ${it('Data da solicitação', dataBR(l.dataSolicitacao))}${it('Último contato', dataBR(l.ultimoContato))}${it('Próximo contato', dataBR(l.proximoContato) + (l.proximoAuto === 'SIM' ? ' <span class="mudo peq">(automático)</span>' : ''))}
+      ${it('Valor estimado', Number(l.valorEstimado) ? moeda(l.valorEstimado) : '')}${it('Responsável', esc(l.responsavelNome))}${it('Cadastrado por', esc(l.criadoPor) + ' em ' + dataHora(l.criadoEm))}
+      ${it('Endereço / região', esc(l.endereco), true)}${it('Necessidade', esc(l.necessidade).replace(/\n/g, '<br>'), true)}
+      ${it('Autorização WhatsApp', l.consentimento === 'SIM' ? `Sim — ${esc(l.consentimentoOrigem)} em ${dataBR(l.consentimentoData)}` : 'Não registrada', true)}
+      ${l.bloqueado === 'SIM' ? it('Motivo do bloqueio', esc(l.motivoBloqueio), true) : ''}
+    </dl>`;
+  } else if (aba === 'orcamentos') {
+    alvo.innerHTML = d.orcamentos.length ? d.orcamentos.map(o => {
+      const pend = d.mensagens.filter(m => m.orcamentoId === o.id && ['AGUARDANDO_APROVACAO', 'PENDENTE'].includes(m.status));
+      return `<article class="orc"><div class="orc-cab"><div><h3>${esc(o.numero)}</h3><span class="mudo peq">Enviado em ${dataBR(o.dataEnvio)} · válido até ${dataBR(o.validade)}</span></div>${pill(o.status, COR_ORC[o.status])}</div>
+        <table>${o.itens.map(i => `<tr><td>${esc(i.descricao)} <span class="mudo">× ${String(i.qtd).replace('.', ',')}</span></td><td class="num">${moeda(i.qtd * i.valorUnit)}</td></tr>`).join('')}
+        ${Number(o.desconto) ? `<tr><td>Desconto</td><td class="num">− ${moeda(o.desconto)}</td></tr>` : ''}<tr><td><b>Total</b></td><td class="num"><b>${moeda(o.total)}</b></td></tr></table>
+        ${o.condicoesPagamento ? `<p class="peq" style="margin:.2rem 0"><b>Pagamento:</b> ${esc(o.condicoesPagamento)}</p>` : ''}
+        ${o.observacoes ? `<p class="peq mudo" style="margin:.2rem 0">${esc(o.observacoes)}</p>` : ''}
+        ${pend.length ? `<p class="peq" style="margin:.4rem 0">Próximo acompanhamento automático: etapa ${esc(pend[0].etapa)} em ${dataHora(pend[0].agendadoPara)}</p>` : ''}
+        ${l.anonimizado === 'SIM' ? '' : `<div class="acoes" style="margin-bottom:0"><button class="btn peq" data-orc="${esc(o.id)}">Editar orçamento</button>
+          ${['Enviado', 'Aguardando resposta'].includes(o.status) && !pend.length ? `<button class="btn peq" data-reiniciar="${esc(o.id)}">Reiniciar acompanhamento</button>` : ''}</div>`}
+      </article>`;
+    }).join('') : `<div class="vazio"><strong>Nenhum orçamento ainda.</strong>Use “Novo orçamento” para registrar a proposta enviada ao cliente.</div>`;
+    $$('[data-orc]', alvo).forEach(b => b.onclick = () => abrirFormOrcamento(l, d.orcamentos.find(o => o.id === b.dataset.orc)));
+    $$('[data-reiniciar]', alvo).forEach(b => b.onclick = () => {
+      if (!confirm('Agendar uma nova sequência de acompanhamentos a partir de hoje para este orçamento?')) return;
+      acao(b, () => api('reiniciarAcompanhamento', { orcamentoId: b.dataset.reiniciar }), 'Nova sequência agendada.').then(() => aposMudanca(l.id)).catch(() => {});
+    });
+  } else if (aba === 'mensagens') {
+    alvo.innerHTML = d.mensagens.length ? d.mensagens.map(m => `<div class="msg">
+      <div class="orc-cab"><b>Etapa ${esc(m.etapa)} · ${dataHora(m.agendadoPara)}</b>${pill(ROTULO_FILA[m.status] || m.status, COR_FILA[m.status])}</div>
+      <div class="peq mudo">${m.statusEntrega ? 'Entrega: ' + esc(ENTREGA[m.statusEntrega] || m.statusEntrega) + ' · ' : ''}${Number(m.tentativas) ? 'Tentativas: ' + esc(m.tentativas) : ''}${m.aprovadoPor ? ' · aprovada por ' + esc(m.aprovadoPor) : ''}</div>
+      ${m.texto ? `<div class="texto">${esc(m.texto)}</div>` : ''}${m.erro ? `<div class="erro-txt">${esc(m.erro)}</div>` : ''}
+      ${['AGUARDANDO_APROVACAO', 'PENDENTE', 'VERIFICAR'].includes(m.status) ? `<div class="acoes" style="margin:.5rem 0 0"><button class="btn peq perigo" data-cancelar-msg="${esc(m.id)}">Cancelar esta mensagem</button></div>` : ''}
+    </div>`).join('') : `<div class="vazio"><strong>Nenhuma mensagem automática.</strong>Elas são agendadas quando um orçamento é marcado como enviado e o cliente autorizou o contato.</div>`;
+    $$('[data-cancelar-msg]', alvo).forEach(b => b.onclick = () => acao(b, () => api('cancelarFila', { ids: [b.dataset.cancelarMsg] }), 'Mensagem cancelada.').then(() => aposMudanca(l.id, false, 'mensagens')).catch(() => {}));
+  } else {
+    alvo.innerHTML = d.historico.length ? `<ol class="linha-tempo">${d.historico.map(h => `<li><time>${dataHora(h.dataHora)}</time><div><b>${esc(h.acao)}</b> <span class="mudo peq">por ${esc(h.usuarioNome)}</span>${h.detalhes ? `<p>${esc(h.detalhes)}</p>` : ''}</div></li>`).join('')}</ol>` : '<div class="vazio">Sem registros.</div>';
+  }
+}
+
+function acaoLead(btn, d) {
+  const l = d.lead;
+  const a = btn.dataset.a;
+  if (a === 'editar') return abrirFormLead(l);
+  if (a === 'orcamento') return abrirFormOrcamento(l);
+  if (a === 'contato') return abrirFormContato(l, d);
+  const executar = (acaoApi, dados, msg) => acao(btn, () => api(acaoApi, dados), msg).then(() => aposMudanca(l.id)).catch(() => {});
+  if (a === 'respondeu') return executar('clienteRespondeu', { leadId: l.id }, 'Acompanhamentos automáticos pausados.');
+  if (a === 'bloquear') { const m = prompt('Motivo do bloqueio de envios (opcional):', ''); if (m === null) return; return executar('bloquearLead', { leadId: l.id, bloquear: true, motivo: m }, 'Envios bloqueados para este lead.'); }
+  if (a === 'desbloquear') return executar('bloquearLead', { leadId: l.id, bloquear: false }, 'Envios desbloqueados.');
+  if (a === 'optout') { if (!confirm('Incluir este número na lista de não contatar? Nenhuma mensagem automática será enviada a ele novamente.')) return; return executar('optoutLead', { leadId: l.id }, 'Número incluído na lista de não contatar.'); }
+  if (a === 'arquivar') { const arq = l.arquivado !== 'SIM'; if (arq && !confirm('Arquivar este lead? O histórico é mantido e os acompanhamentos pendentes são cancelados.')) return; return executar('arquivarLead', { id: l.id, arquivar: arq }, arq ? 'Lead arquivado.' : 'Lead reativado.'); }
+  if (a === 'anonimizar') {
+    const m = prompt('Anonimizar remove nome, telefone, e-mail, endereço e textos deste lead de forma definitiva (LGPD). Digite ANONIMIZAR para confirmar:');
+    if (m !== 'ANONIMIZAR') return;
+    return executar('anonimizarLead', { id: l.id, motivo: 'Solicitação do titular' }, 'Dados anonimizados.');
+  }
+}
+
+function aposMudanca(leadId, abrir, aba) {
+  if (leadId && (abrir || $('#dlgLead').open)) abrirLead(leadId, aba || ($('[data-aba][aria-selected="true"]') || {}).dataset?.aba || 'resumo');
+  const r = location.hash.replace('#', '').split('/')[0];
+  if (r === 'leads') carregarLeads(); else if (r === 'painel' || !r) carregarPainel(); else if (r === 'fila') carregarFila();
+  atualizarContadorFila();
+}
+
+/* ---------------------------- Registrar contato ---------------------------- */
+function abrirFormContato(l, d) {
+  const temPend = d.mensagens.some(m => ['AGUARDANDO_APROVACAO', 'PENDENTE'].includes(m.status));
+  abrirDialogo('Registrar contato', `
+    <p class="mudo" style="margin-top:0">${esc(l.nome)} · ${tel(l.telefone)}</p>
+    <div class="grade">
+      <label class="campo">Tipo<select class="inp" name="tipo">${opcoes(S.listas.tipoContato, 'Ligação')}</select></label>
+      <label class="campo">Próximo contato<input class="inp" type="date" name="proximoContato" value="${esc(l.proximoAuto === 'SIM' ? '' : l.proximoContato)}"></label>
+      <label class="campo">Mudar status do lead<select class="inp" name="status">${opcoes(S.listas.statusLead, '', 'Manter: ' + l.status)}</select></label>
+      <label class="campo larga">O que foi conversado<textarea class="inp" name="descricao" required maxlength="2000"></textarea></label>
+      ${temPend ? '<label class="check larga"><input type="checkbox" name="clienteRespondeu" checked> O cliente respondeu: pausar os acompanhamentos automáticos</label>' : ''}
+    </div>`, rodapePadrao('Registrar contato'),
+    async f => {
+      const dados = Object.fromEntries(new FormData(f));
+      dados.leadId = l.id; dados.clienteRespondeu = !!(f.clienteRespondeu && f.clienteRespondeu.checked);
+      if (!dados.proximoContato) delete dados.proximoContato;
+      await api('registrarContato', dados);
+      $('#dlgForm').close(); aviso('Contato registrado.', 'ok'); aposMudanca(l.id, false, 'historico');
+    });
+}
+
+/* ---------------------------- Orçamento ---------------------------- */
+function abrirFormOrcamento(l, o = null) {
+  const novo = !o;
+  o = o || { status: 'Em preparação', itens: [{ descricao: '', qtd: 1, valorUnit: '' }], desconto: 0 };
+  const linhaItem = (i = {}) => `<tr><td><input class="inp" name="desc" placeholder="Serviço ou equipamento" value="${esc(i.descricao || '')}"></td>
+    <td><input class="inp" name="qtd" inputmode="decimal" value="${esc(String(i.qtd ?? 1).replace('.', ','))}"></td>
+    <td><input class="inp" name="vu" inputmode="decimal" placeholder="0,00" value="${i.valorUnit !== '' && i.valorUnit !== undefined ? esc(Number(i.valorUnit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : ''}"></td>
+    <td class="st num"></td><td><button type="button" class="btn peq discreto" data-rm aria-label="Remover item">×</button></td></tr>`;
+  const f = abrirDialogo(novo ? 'Novo orçamento' : 'Editar ' + esc(o.numero), `
+    <p class="mudo" style="margin-top:0">${esc(l.nome)} · ${esc(l.servico)}</p>
+    <table class="itens-orc"><thead><tr><th>Item</th><th style="width:80px">Qtd.</th><th style="width:130px">Valor unit.</th><th style="width:110px" class="st">Subtotal</th><th style="width:40px"></th></tr></thead>
+      <tbody id="itensOrc">${o.itens.map(linhaItem).join('')}</tbody></table>
+    <button type="button" class="btn peq" id="addItem">Adicionar item</button>
+    <div class="grade" style="margin-top:1rem">
+      <label class="campo">Desconto (R$)<input class="inp" name="desconto" inputmode="decimal" value="${Number(o.desconto) ? esc(Number(o.desconto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : ''}"></label>
+      <label class="campo">Status<select class="inp" name="status">${opcoes(S.listas.statusOrcamento, o.status)}</select></label>
+      <label class="campo">Data de envio<input class="inp" type="date" name="dataEnvio" value="${esc(o.dataEnvio || '')}"></label>
+      <label class="campo">Válido até<input class="inp" type="date" name="validade" value="${esc(o.validade || '')}"></label>
+      <label class="campo larga">Condições de pagamento<input class="inp" name="condicoesPagamento" maxlength="500" value="${esc(o.condicoesPagamento || '')}" placeholder="Ex.: entrada + 3x no cartão; mensalidade de monitoramento R$ 89,90"></label>
+      <label class="campo larga">Observações comerciais<textarea class="inp" name="observacoes" maxlength="2000">${esc(o.observacoes || '')}</textarea></label>
+    </div>
+    <div class="totais"><span>Subtotal: <b id="tSub">R$ 0,00</b></span><span>Desconto: <b id="tDesc">R$ 0,00</b></span><strong id="tTotal">R$ 0,00</strong></div>
+    <p class="aviso" id="avisoEnvio" style="margin-top:1rem" hidden></p>`,
+    rodapePadrao(novo ? 'Criar orçamento' : 'Salvar orçamento'),
+    async form => {
+      const itens = $$('#itensOrc tr').map(tr => ({ descricao: $('[name=desc]', tr).value, qtd: num($('[name=qtd]', tr).value), valorUnit: num($('[name=vu]', tr).value) })).filter(i => i.descricao.trim());
+      const d = { leadId: l.id, id: o.id, itens, desconto: num(form.desconto.value), status: form.status.value, dataEnvio: form.dataEnvio.value, validade: form.validade.value, condicoesPagamento: form.condicoesPagamento.value, observacoes: form.observacoes.value };
+      const r = await api('salvarOrcamento', d);
+      $('#dlgForm').close(); aviso(novo ? `Orçamento ${r.numero} criado.` : 'Orçamento salvo.', 'ok'); aposMudanca(l.id, false, 'orcamentos');
+    });
+  const recalcular = () => {
+    let sub = 0;
+    $$('#itensOrc tr').forEach(tr => { const s = num($('[name=qtd]', tr).value) * num($('[name=vu]', tr).value); sub += s; $('.st', tr).textContent = moeda(s); });
+    const desc = num(f.desconto.value);
+    $('#tSub').textContent = moeda(sub); $('#tDesc').textContent = moeda(desc); $('#tTotal').textContent = 'Total ' + moeda(Math.max(0, sub - desc));
+    const ativo = ['Enviado', 'Aguardando resposta'].includes(f.status.value);
+    const av = $('#avisoEnvio');
+    av.hidden = !ativo || (!novo && ['Enviado', 'Aguardando resposta'].includes(o.status));
+    av.textContent = l.consentimento === 'SIM' && l.bloqueado !== 'SIM'
+      ? 'Ao salvar como enviado, os acompanhamentos automáticos pelo WhatsApp serão agendados conforme a programação comercial.'
+      : 'Este cliente não tem autorização registrada (ou está bloqueado): nenhum acompanhamento automático será agendado. Faça o acompanhamento por ligação.';
+  };
+  const ligar = tr => { $('[data-rm]', tr).onclick = () => { if ($$('#itensOrc tr').length > 1) tr.remove(); recalcular(); }; };
+  $$('#itensOrc tr').forEach(ligar);
+  $('#addItem').onclick = () => { $('#itensOrc').insertAdjacentHTML('beforeend', linhaItem()); const tr = $('#itensOrc tr:last-child'); ligar(tr); $('[name=desc]', tr).focus(); };
+  f.addEventListener('input', recalcular); f.addEventListener('change', recalcular);
+  recalcular();
+}
+function num(v) { if (typeof v === 'number') return v; let s = String(v || '').replace(/[R$\s]/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? n : 0; }
+
+/* =========================================================================
+   FILA DE MENSAGENS
+   ========================================================================= */
+function vistaFila() {
+  vista(`
+    <div class="cabecalho"><div><h1>Mensagens automáticas</h1><p class="mudo">Acompanhamentos agendados, enviados, com falha e cancelados.</p></div>
+      ${ehAdmin() ? '<button class="btn" id="btnProcessar">Processar agora</button>' : ''}</div>
+    <div class="seg" id="segFila"></div>
+    <section class="bloco"><div class="barra-acoes" id="acoesFila"></div><div id="listaFila"><div class="carregando">Carregando…</div></div></section>`);
+  if (ehAdmin()) $('#btnProcessar').onclick = e => acao(e.currentTarget, () => api('processarAgora')).then(r => {
+    aviso(`${r.mensagem} Enviadas: ${r.enviados} · simuladas: ${r.simulados} · reagendadas: ${r.reagendados} · falhas: ${r.falhas} · canceladas: ${r.cancelados}`, r.falhas ? 'erro' : 'ok');
+    carregarFila(); atualizarContadorFila();
+  }).catch(() => {});
+  carregarFila();
+}
+async function carregarFila() {
+  const alvo = $('#listaFila'); if (!alvo) return;
+  try {
+    const r = await api('listarFila', { status: S.filaStatus });
+    if (!$('#listaFila')) return;
+    const ordem = ['AGUARDANDO_APROVACAO', 'PENDENTE', 'ENVIADO', 'SIMULADO', 'VERIFICAR', 'FALHA', 'CANCELADO', ''];
+    $('#segFila').innerHTML = ordem.map(s => `<button type="button" data-s="${s}" aria-pressed="${S.filaStatus === s}">${s ? ROTULO_FILA[s] : 'Todas'}<b>${s ? (r.contagem[s] || 0) : Object.values(r.contagem).reduce((a, b) => a + b, 0)}</b></button>`).join('');
+    $$('#segFila button').forEach(b => b.onclick = () => { S.filaStatus = b.dataset.s; carregarFila(); });
+    const selecionaveis = ['AGUARDANDO_APROVACAO', 'PENDENTE', 'VERIFICAR'];
+    const temSel = r.itens.some(i => selecionaveis.includes(i.status));
+    $('#acoesFila').innerHTML = temSel ? `<label class="check"><input type="checkbox" id="selTodas"> Selecionar todas</label>
+      ${ehAdmin() && r.itens.some(i => i.status === 'AGUARDANDO_APROVACAO') ? '<button class="btn pri peq" id="btnAprovar">Aprovar selecionadas</button>' : ''}
+      <button class="btn peq perigo" id="btnCancelarSel">Cancelar selecionadas</button>` : '';
+    if (!r.itens.length) { alvo.innerHTML = `<div class="vazio"><strong>Nada por aqui.</strong>${S.filaStatus === 'AGUARDANDO_APROVACAO' ? 'Não há mensagens esperando aprovação.' : 'Nenhuma mensagem com este status.'}</div>`; return; }
+    alvo.innerHTML = r.itens.map(i => `<div class="item-fila">
+      <div>${selecionaveis.includes(i.status) ? `<input type="checkbox" class="selFila" value="${esc(i.id)}" aria-label="Selecionar mensagem para ${esc(i.leadNome)}">` : ''}</div>
+      <div><a href="#fila" data-lead="${esc(i.leadId)}"><b>${esc(i.leadNome)}</b></a> <span class="mudo peq">${tel(i.telefone)} · etapa ${esc(i.etapa)} · ${esc(i.orcamentoNumero)}${ehAdmin() ? ' · ' + esc(i.responsavelNome) : ''}</span></div>
+      <div class="ladod">${pill(ROTULO_FILA[i.status] || i.status, COR_FILA[i.status])}<span class="peq mudo num">${['AGUARDANDO_APROVACAO', 'PENDENTE'].includes(i.status) ? 'para ' : ''}${dataHora(i.agendadoPara)}</span>
+        ${ehAdmin() && ['VERIFICAR', 'FALHA'].includes(i.status) ? `<button class="btn peq" data-reenviar="${esc(i.id)}">Reenviar</button>` : ''}</div>
+      ${i.texto ? `<div class="texto">${esc(i.texto)}</div>` : ''}
+      ${i.erro ? `<div class="erro-txt">${esc(i.erro)}</div>` : ''}
+      ${i.statusEntrega && !['simulado'].includes(i.statusEntrega) ? `<div class="texto peq">Entrega: ${esc(ENTREGA[i.statusEntrega] || i.statusEntrega)}</div>` : ''}
+    </div>`).join('');
+    $$('[data-lead]', alvo).forEach(a => a.onclick = e => { e.preventDefault(); abrirLead(a.dataset.lead, 'mensagens'); });
+    const sels = () => $$('.selFila:checked').map(c => c.value);
+    const st = $('#selTodas'); if (st) st.onchange = () => $$('.selFila').forEach(c => { c.checked = st.checked; });
+    const ba = $('#btnAprovar'); if (ba) ba.onclick = () => { const ids = sels(); if (!ids.length) return aviso('Selecione ao menos uma mensagem.', 'erro'); acao(ba, () => api('aprovarFila', { ids }), '').then(x => { aviso(x.aprovadas + ' mensagem(ns) aprovada(s).', 'ok'); carregarFila(); atualizarContadorFila(); }).catch(() => {}); };
+    const bc = $('#btnCancelarSel'); if (bc) bc.onclick = () => { const ids = sels(); if (!ids.length) return aviso('Selecione ao menos uma mensagem.', 'erro'); if (!confirm('Cancelar ' + ids.length + ' mensagem(ns)?')) return; acao(bc, () => api('cancelarFila', { ids }), '').then(x => { aviso(x.canceladas + ' mensagem(ns) cancelada(s).', 'ok'); carregarFila(); atualizarContadorFila(); }).catch(() => {}); };
+    $$('[data-reenviar]', alvo).forEach(b => b.onclick = () => {
+      if (!confirm('Antes de reenviar, confira no WhatsApp Business se o cliente NÃO recebeu esta mensagem. Reenviar agora?')) return;
+      acao(b, () => api('reprocessarFila', { id: b.dataset.reenviar }), 'Mensagem liberada para reenvio no próximo ciclo.').then(carregarFila).catch(() => {});
+    });
+  } catch (e) { alvo.innerHTML = `<div class="vazio"><strong>Não foi possível carregar.</strong>${esc(e.message)}</div>`; }
+}
+
+/* =========================================================================
+   AJUSTES (somente administrador)
+   ========================================================================= */
+function vistaAjustes(sub = 'envios') {
+  const abas = [['envios', 'Envios e WhatsApp'], ['modelos', 'Modelos de mensagem'], ['usuarios', 'Usuários'], ['naocontatar', 'Não contatar']];
+  vista(`<div class="cabecalho"><div><h1>Ajustes</h1><p class="mudo">Regras de envio, integração oficial com o WhatsApp, modelos e equipe.</p></div></div>
+    <nav class="subabas">${abas.map(([k, t]) => `<a href="#ajustes/${k}" ${k === sub ? 'aria-current="page"' : ''}>${t}</a>`).join('')}</nav>
+    <div id="ajustesConteudo"><div class="carregando">Carregando…</div></div>`);
+  ({ envios: ajustesEnvios, modelos: ajustesModelos, usuarios: ajustesUsuarios, naocontatar: ajustesOptOut }[sub] || ajustesEnvios)();
+}
+
+async function ajustesEnvios() {
+  const alvo = $('#ajustesConteudo');
+  try {
+    const c = await api('obterConfig');
+    const v = c.valores, cr = c.credenciais;
+    const dias = (v.DIAS_SEMANA || '').split(',');
+    const nomesDias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    alvo.innerHTML = `
+    <form id="formCfg" class="bloco" novalidate>
+      <h2>Controle de envios</h2>
+      <div class="interruptor"><div><b>Modo teste</b><p>Ligado: as mensagens são apenas simuladas e registradas. Desligue só depois de configurar e testar a integração.</p></div><input type="checkbox" name="MODO_TESTE" ${v.MODO_TESTE === 'SIM' ? 'checked' : ''} aria-label="Modo teste"></div>
+      <div class="interruptor"><div><b>Aprovar cada mensagem antes do envio</b><p>Ligado: toda mensagem agendada espera a sua aprovação na tela Mensagens.</p></div><input type="checkbox" name="REQUER_APROVACAO" ${v.REQUER_APROVACAO === 'SIM' ? 'checked' : ''} aria-label="Exigir aprovação"></div>
+      <div class="interruptor perigo"><div><b>Pausar todos os envios</b><p>Bloqueio geral imediato. Nada é enviado enquanto estiver ligado.</p></div><input type="checkbox" name="ENVIOS_PAUSADOS" ${v.ENVIOS_PAUSADOS === 'SIM' ? 'checked' : ''} aria-label="Pausar envios"></div>
+      <fieldset><legend>Programação dos acompanhamentos</legend>
+        <p class="mudo peq" style="margin-top:0">Dias contados a partir da data de envio do orçamento. Use 0 para desativar uma etapa.</p>
+        <div class="grade">
+          <label class="campo">1º acompanhamento (dias)<input class="inp" type="number" min="0" max="90" name="DIAS_ETAPA_1" value="${esc(v.DIAS_ETAPA_1)}"></label>
+          <label class="campo">2º acompanhamento (dias)<input class="inp" type="number" min="0" max="90" name="DIAS_ETAPA_2" value="${esc(v.DIAS_ETAPA_2)}"></label>
+          <label class="campo">Encerramento (dias)<input class="inp" type="number" min="0" max="90" name="DIAS_ETAPA_3" value="${esc(v.DIAS_ETAPA_3)}"></label>
+        </div></fieldset>
+      <fieldset><legend>Horário comercial</legend>
+        <div class="grade">
+          <label class="campo">Envios a partir de<input class="inp" type="time" name="HORA_INICIO" value="${esc(v.HORA_INICIO)}"></label>
+          <label class="campo">Envios até<input class="inp" type="time" name="HORA_FIM" value="${esc(v.HORA_FIM)}"></label>
+          <label class="campo">Horário dos agendamentos<input class="inp" type="time" name="HORA_PREFERIDA" value="${esc(v.HORA_PREFERIDA)}"></label>
+          <label class="campo">Fuso horário<input class="inp" name="FUSO" value="${esc(v.FUSO)}"></label>
+        </div>
+        <p class="peq" style="margin:.9rem 0 .4rem;font-weight:600;color:var(--texto-2)">Dias permitidos</p>
+        <div class="dias-semana">${nomesDias.map((n, i) => `<label><input type="checkbox" class="diaSem" value="${i + 1}" ${dias.includes(String(i + 1)) ? 'checked' : ''}> ${n}</label>`).join('')}</div>
+      </fieldset>
+      <fieldset><legend>Limites para não incomodar o cliente</legend>
+        <div class="grade">
+          <label class="campo">Máximo de mensagens por contato em 30 dias<input class="inp" type="number" min="1" max="10" name="MAX_MSG_30_DIAS" value="${esc(v.MAX_MSG_30_DIAS)}"></label>
+          <label class="campo">Intervalo mínimo entre mensagens (horas)<input class="inp" type="number" min="0" max="240" name="MIN_HORAS_ENTRE_MSG" value="${esc(v.MIN_HORAS_ENTRE_MSG)}"></label>
+          <label class="campo">Tentativas em erro temporário<input class="inp" type="number" min="1" max="5" name="MAX_TENTATIVAS" value="${esc(v.MAX_TENTATIVAS)}"></label>
+          <label class="campo">Validade padrão do orçamento (dias)<input class="inp" type="number" min="1" max="365" name="VALIDADE_PADRAO_DIAS" value="${esc(v.VALIDADE_PADRAO_DIAS)}"></label>
+          <label class="campo larga">Respostas que bloqueiam novos envios (separadas por vírgula)<input class="inp" name="PALAVRAS_OPTOUT" value="${esc(v.PALAVRAS_OPTOUT)}"></label>
+        </div></fieldset>
+      <fieldset><legend>Empresa</legend>
+        <div class="grade">
+          <label class="campo">Nome usado nas mensagens<input class="inp" name="EMPRESA" value="${esc(v.EMPRESA)}"></label>
+          <label class="campo">Número do WhatsApp Business<input class="inp" name="NUMERO_WHATSAPP" value="${esc(v.NUMERO_WHATSAPP)}"></label>
+          <label class="campo">Versão da Graph API<input class="inp" name="GRAPH_VERSAO" value="${esc(v.GRAPH_VERSAO)}"></label>
+        </div></fieldset>
+      <div class="acoes" style="margin-top:1rem"><button class="btn pri" type="submit">Salvar configurações</button></div>
+    </form>
+
+    <form id="formCred" class="bloco" novalidate>
+      <h2>Integração oficial com o WhatsApp (Cloud API da Meta)</h2>
+      <p class="mudo" style="margin-top:0">As credenciais ficam guardadas no servidor do Google (Propriedades do script) e nunca aparecem nesta página. Veja o passo a passo no guia de instalação.</p>
+      <div class="grade">
+        <label class="campo">Identificação do número de telefone (Phone number ID)<input class="inp" name="phoneNumberId" inputmode="numeric" value="${esc(cr.phoneNumberId)}" placeholder="Ex.: 123456789012345"></label>
+        <label class="campo">ID da conta do WhatsApp Business (opcional)<input class="inp" name="wabaId" inputmode="numeric" value="${esc(cr.wabaId)}"></label>
+        <label class="campo larga">Token de acesso permanente ${cr.tokenConfigurado ? `<span class="pill ok">configurado ${esc(cr.tokenFinal)}</span>` : '<span class="pill">não configurado</span>'}<input class="inp" name="token" type="password" autocomplete="off" placeholder="${cr.tokenConfigurado ? 'Deixe em branco para manter o atual' : 'Cole o token do usuário do sistema'}"></label>
+      </div>
+      <div class="acoes" style="margin-top:1rem"><button class="btn pri" type="submit">Salvar credenciais</button><button class="btn" type="button" id="btnTestar">Testar conexão</button></div>
+      <div id="resTeste"></div>
+      <fieldset><legend>Webhook (respostas dos clientes)</legend>
+        <p class="mudo peq" style="margin-top:0">Cadastre estes dados no painel da Meta, em WhatsApp &gt; Configuração &gt; Webhook, e assine o campo “messages”.</p>
+        <label class="campo">URL de retorno de chamada</label><div class="codigo"><code id="cUrl">${esc(c.webhookUrl || 'Implante o App da Web para obter a URL')}</code><button type="button" class="btn peq" data-copiar="cUrl">Copiar</button></div>
+        <label class="campo" style="margin-top:.6rem">Token de verificação</label><div class="codigo"><code id="cVt">${esc(cr.verifyToken)}</code><button type="button" class="btn peq" data-copiar="cVt">Copiar</button></div>
+      </fieldset>
+      <fieldset><legend>Processamento automático</legend>
+        <p style="margin-top:0">${c.gatilhoAtivo ? pill('Ativo', 'ok') + ' A fila é verificada a cada 10 minutos.' : pill('Desativado', 'erro') + ' A fila não está sendo processada automaticamente.'}</p>
+        <button type="button" class="btn peq" id="btnGatilho">Reinstalar processamento automático</button>
+      </fieldset>
+    </form>`;
+
+    $('#formCfg').onsubmit = async ev => {
+      ev.preventDefault();
+      const f = ev.target, valores = {};
+      $$('input', f).forEach(i => { if (i.name && i.type !== 'checkbox') valores[i.name] = i.value; });
+      ['MODO_TESTE', 'REQUER_APROVACAO', 'ENVIOS_PAUSADOS'].forEach(k => { valores[k] = f[k].checked ? 'SIM' : 'NAO'; });
+      valores.DIAS_SEMANA = $$('.diaSem:checked', f).map(c => c.value).join(',');
+      if (v.MODO_TESTE === 'SIM' && valores.MODO_TESTE === 'NAO' && !confirm('Desligar o modo teste? A partir de agora as mensagens aprovadas serão enviadas de verdade aos clientes.')) return;
+      try { S.config = await acao($('button[type=submit]', f), () => api('salvarConfig', { valores }), 'Configurações salvas.'); faixas(); } catch (e) {}
+    };
+    $('#formCred').onsubmit = async ev => {
+      ev.preventDefault();
+      const f = ev.target;
+      const d = { phoneNumberId: f.phoneNumberId.value.trim(), wabaId: f.wabaId.value.trim(), token: f.token.value.trim() };
+      try { await acao($('button[type=submit]', f), () => api('salvarCredenciais', d), 'Credenciais salvas.'); ajustesEnvios(); } catch (e) {}
+    };
+    $('#btnTestar').onclick = e => acao(e.currentTarget, () => api('testarIntegracao')).then(r => {
+      $('#resTeste').innerHTML = `<p class="aviso" style="background:var(--ok-claro);color:var(--ok)">Conexão funcionando: ${esc(r.numero)} — ${esc(r.nome)}. Qualidade: ${esc(r.qualidade || 'sem dados')}.</p>`;
+    }).catch(err => { $('#resTeste').innerHTML = `<p class="aviso erro">${esc(err.message)}</p>`; });
+    $('#btnGatilho').onclick = e => acao(e.currentTarget, () => api('reinstalarGatilho'), 'Processamento automático reinstalado.').then(ajustesEnvios).catch(() => {});
+    $$('[data-copiar]').forEach(b => b.onclick = () => { navigator.clipboard.writeText($('#' + b.dataset.copiar).textContent).then(() => aviso('Copiado.', 'ok')); });
+  } catch (e) { alvo.innerHTML = `<div class="bloco vazio">${esc(e.message)}</div>`; }
+}
+
+async function ajustesModelos() {
+  const alvo = $('#ajustesConteudo');
+  try {
+    const lista = await api('listarModelos');
+    alvo.innerHTML = `<section class="bloco"><div class="cabecalho" style="margin-bottom:.6rem"><div><h2 style="margin:0">Biblioteca de mensagens</h2>
+      <p class="mudo peq">Cada modelo precisa estar cadastrado e aprovado na Meta com o mesmo nome. Se houver mais de um modelo ativo na mesma etapa, o sistema alterna para não repetir o texto ao mesmo cliente.</p></div>
+      <button class="btn pri" id="novoModelo">Novo modelo</button></div>
+      ${lista.map(m => `<article class="orc"><div class="orc-cab"><div><h3>Etapa ${esc(m.etapa)} · ${esc(m.nome)}</h3><span class="mudo peq">Nome na Meta: ${esc(m.templateMeta)} · ${esc(m.idioma)}</span></div>${m.ativo === 'SIM' ? pill('Ativo', 'ok') : pill('Inativo')}</div>
+        <div class="previa" style="margin:.6rem 0">${esc(m.corpo)}</div><button class="btn peq" data-mod="${esc(m.id)}">Editar</button></article>`).join('')}</section>`;
+    $('#novoModelo').onclick = () => abrirFormModelo();
+    $$('[data-mod]', alvo).forEach(b => b.onclick = () => abrirFormModelo(lista.find(m => m.id === b.dataset.mod)));
+  } catch (e) { alvo.innerHTML = `<div class="bloco vazio">${esc(e.message)}</div>`; }
+}
+function abrirFormModelo(m = null) {
+  const novo = !m; m = m || { etapa: 1, idioma: 'pt_BR', ativo: 'SIM', corpo: '' };
+  const exemplo = { NOME: 'Maria', NOME_COMPLETO: 'Maria da Silva', SERVICO: 'câmeras de segurança', EMPRESA: S.config.EMPRESA || 'Vegas Vigilância e Segurança', ORCAMENTO: 'ORC-2026-0001', VENDEDOR: S.usuario.nome.split(' ')[0] };
+  const f = abrirDialogo(novo ? 'Novo modelo de mensagem' : 'Editar modelo', `
+    <div class="grade">
+      <label class="campo">Nome interno<input class="inp" name="nome" value="${esc(m.nome || '')}"></label>
+      <label class="campo">Etapa<select class="inp" name="etapa">${opcoes([{ v: 1, t: '1º acompanhamento' }, { v: 2, t: '2º acompanhamento' }, { v: 3, t: 'Encerramento' }], m.etapa)}</select></label>
+      <label class="campo">Nome do modelo na Meta<input class="inp" name="templateMeta" value="${esc(m.templateMeta || '')}" placeholder="followup_orcamento_1"></label>
+      <label class="campo">Idioma<input class="inp" name="idioma" value="${esc(m.idioma)}"></label>
+      <label class="campo larga">Texto da mensagem<textarea class="inp" name="corpo" rows="5" maxlength="1024">${esc(m.corpo)}</textarea></label>
+      <div class="larga"><p class="peq mudo" style="margin:0 0 .4rem">Inserir variável no texto:</p><div class="chips">${S.listas.variaveis.map(x => `<button type="button" data-var="${x}">[${x}]</button>`).join('')}</div></div>
+      <label class="check larga"><input type="checkbox" name="ativo" ${m.ativo === 'SIM' ? 'checked' : ''}> Modelo ativo</label>
+    </div>
+    <fieldset><legend>Como o cliente vai receber</legend><div class="previa" id="previa"></div></fieldset>
+    <fieldset><legend>Texto para cadastrar na Meta</legend>
+      <p class="mudo peq" style="margin-top:0">No WhatsApp Manager, crie um modelo com o nome acima, idioma Português (BR), e cole este texto. Os exemplos das variáveis aparecem abaixo.</p>
+      <div class="codigo"><code id="txtMeta"></code><button type="button" class="btn peq" id="copMeta">Copiar</button></div><p class="peq mudo" id="exMeta"></p>
+    </fieldset>`, rodapePadrao(novo ? 'Criar modelo' : 'Salvar modelo'),
+    async form => {
+      const d = Object.fromEntries(new FormData(form)); d.ativo = form.ativo.checked ? 'SIM' : 'NAO'; if (!novo) d.id = m.id;
+      await api('salvarModelo', d); $('#dlgForm').close(); aviso('Modelo salvo.', 'ok'); ajustesModelos();
+    });
+  const atualizar = () => {
+    const t = f.corpo.value; let i = 0; const vars = [];
+    $('#previa').textContent = t.replace(/\[([A-Z_]+)\]/g, (x, k) => exemplo[k] ?? x) || 'Escreva o texto acima.';
+    $('#txtMeta').textContent = t.replace(/\[([A-Z_]+)\]/g, (x, k) => { vars.push(k); return '{{' + (++i) + '}}'; });
+    $('#exMeta').textContent = vars.length ? 'Exemplos: ' + vars.map((k, j) => `{{${j + 1}}} = ${exemplo[k] ?? k}`).join(' · ') : '';
+  };
+  f.corpo.addEventListener('input', atualizar);
+  $$('[data-var]', f).forEach(b => b.onclick = () => { const ta = f.corpo, p = ta.selectionStart ?? ta.value.length, ins = `[${b.dataset.var}]`; ta.value = ta.value.slice(0, p) + ins + ta.value.slice(ta.selectionEnd ?? p); ta.focus(); ta.selectionStart = ta.selectionEnd = p + ins.length; atualizar(); });
+  $('#copMeta').onclick = () => navigator.clipboard.writeText($('#txtMeta').textContent).then(() => aviso('Copiado.', 'ok'));
+  atualizar();
+}
+
+async function ajustesUsuarios() {
+  const alvo = $('#ajustesConteudo');
+  try {
+    const lista = await api('listarUsuarios');
+    alvo.innerHTML = `<section class="bloco"><div class="cabecalho" style="margin-bottom:.6rem"><h2 style="margin:0">Equipe</h2><button class="btn pri" id="novoUsuario">Novo usuário</button></div>
+      <div class="tabela-wrap"><table class="tab"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th></th></tr></thead><tbody>
+      ${lista.map(u => `<tr><td data-r="" class="nome">${esc(u.nome)}</td><td data-r="Login">${esc(u.email)}</td><td data-r="Perfil">${u.perfil === 'admin' ? 'Administrador' : 'Vendedor'}</td><td data-r="Situação">${u.ativo === 'SIM' ? pill('Ativo', 'ok') : pill('Inativo')}</td><td data-r=""><button class="btn peq" data-u="${esc(u.id)}">Editar</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="mudo peq">Vendedores veem e editam apenas os próprios leads. Administradores veem tudo, aprovam mensagens e alteram as configurações.</p></section>`;
+    $('#novoUsuario').onclick = () => abrirFormUsuario();
+    $$('[data-u]', alvo).forEach(b => b.onclick = () => abrirFormUsuario(lista.find(u => u.id === b.dataset.u)));
+  } catch (e) { alvo.innerHTML = `<div class="bloco vazio">${esc(e.message)}</div>`; }
+}
+function abrirFormUsuario(u = null) {
+  const novo = !u; u = u || { perfil: 'vendedor', ativo: 'SIM' };
+  abrirDialogo(novo ? 'Novo usuário' : 'Editar usuário', `<div class="grade">
+      <label class="campo">Nome<input class="inp" name="nome" value="${esc(u.nome || '')}"></label>
+      <label class="campo">Login (e-mail ou usuário)<input class="inp" name="email" autocomplete="off" value="${esc(u.email || '')}"></label>
+      <label class="campo">Perfil<select class="inp" name="perfil">${opcoes([{ v: 'vendedor', t: 'Vendedor' }, { v: 'admin', t: 'Administrador' }], u.perfil)}</select></label>
+      <label class="campo">Situação<select class="inp" name="ativo">${opcoes([{ v: 'SIM', t: 'Ativo' }, { v: 'NAO', t: 'Inativo' }], u.ativo)}</select></label>
+      <label class="campo larga">${novo ? 'Senha inicial (mínimo 8 caracteres)' : 'Nova senha (deixe em branco para manter)'}<input class="inp" name="senha" type="password" autocomplete="new-password"></label>
+    </div>`, rodapePadrao(novo ? 'Criar usuário' : 'Salvar usuário'),
+    async f => {
+      const d = Object.fromEntries(new FormData(f)); if (!novo) d.id = u.id;
+      await api('salvarUsuario', d); $('#dlgForm').close(); aviso('Usuário salvo.', 'ok');
+      api('listarVendedores').then(v => { S.vendedores = v; }); ajustesUsuarios();
+    });
+}
+
+async function ajustesOptOut() {
+  const alvo = $('#ajustesConteudo');
+  try {
+    const lista = await api('listarOptOut');
+    alvo.innerHTML = `<section class="bloco"><h2>Lista de não contatar</h2>
+      <p class="mudo" style="margin-top:0">Números que pediram para não receber mensagens. Nenhum envio automático é feito para eles. Retire um número apenas se o próprio cliente pedir para voltar a receber.</p>
+      ${lista.length ? `<div class="tabela-wrap"><table class="tab"><thead><tr><th>Telefone</th><th>Motivo</th><th>Origem</th><th>Data</th><th></th></tr></thead><tbody>
+      ${lista.map(o => `<tr><td data-r="" class="nome">${o.telefone === '(anonimizado)' ? 'Anonimizado' : tel(o.telefone)}</td><td data-r="Motivo">${esc(o.motivo)}</td><td data-r="Origem">${esc(o.origem)}</td><td data-r="Data">${dataHora(o.data)}</td>
+        <td data-r="">${o.telefone === '(anonimizado)' ? '' : `<button class="btn peq" data-tel="${esc(o.chave)}">Retirar da lista</button>`}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="vazio"><strong>Lista vazia.</strong>Quando um cliente pedir para parar, o número aparece aqui.</div>'}</section>`;
+    $$('[data-tel]', alvo).forEach(b => b.onclick = () => {
+      const m = prompt('Por que este número vai voltar a receber mensagens? (ex.: cliente pediu por telefone em 10/10)');
+      if (!m) return;
+      acao(b, () => api('removerOptOut', { chave: b.dataset.tel, motivo: m }), 'Número retirado da lista.').then(ajustesOptOut).catch(() => {});
+    });
+  } catch (e) { alvo.innerHTML = `<div class="bloco vazio">${esc(e.message)}</div>`; }
+}
+
+/* =========================================================================
+   CONTA
+   ========================================================================= */
+function vistaConta() {
+  vista(`<div class="cabecalho"><div><h1>Minha conta</h1><p class="mudo">${esc(S.usuario.nome)} · ${esc(S.usuario.email)} · ${ehAdmin() ? 'Administrador' : 'Vendedor'}</p></div><button class="btn" id="btnSair">Sair</button></div>
+    <form class="bloco" id="formSenha" novalidate style="max-width:520px"><h2>Trocar senha</h2>
+      <div class="grade" style="grid-template-columns:1fr">
+        <label class="campo">Senha atual<input class="inp" type="password" name="senhaAtual" autocomplete="current-password"></label>
+        <label class="campo">Nova senha (mínimo 8 caracteres)<input class="inp" type="password" name="novaSenha" autocomplete="new-password"></label>
+        <label class="campo">Repita a nova senha<input class="inp" type="password" name="repetir" autocomplete="new-password"></label>
+      </div><div class="acoes" style="margin-top:1rem"><button class="btn pri" type="submit">Trocar senha</button></div></form>`);
+  $('#btnSair').onclick = () => sair();
+  $('#formSenha').onsubmit = ev => {
+    ev.preventDefault(); const f = ev.target;
+    if (f.novaSenha.value !== f.repetir.value) return aviso('As duas senhas novas não são iguais.', 'erro');
+    acao($('button[type=submit]', f), () => api('alterarSenha', { senhaAtual: f.senhaAtual.value, novaSenha: f.novaSenha.value }), 'Senha trocada.').then(() => f.reset()).catch(() => {});
+  };
+}
+
+/* =========================================================================
+   INÍCIO
+   ========================================================================= */
+(async function () {
+  let t = null; try { t = localStorage.getItem('crmVegasToken'); } catch (e) {}
+  if (!t || API_URL.includes('COLE_AQUI')) return mostrarLogin();
+  S.token = t;
+  try { iniciar(await api('me')); } catch (e) { mostrarLogin(); }
+})();
+</script>
 </body>
 </html>
