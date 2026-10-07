@@ -17,7 +17,7 @@
  * O sistema começa em MODO TESTE: nenhuma mensagem real é enviada.
  ******************************************************************************/
 
-const VERSAO = '1.0.0';
+const VERSAO = '1.1.0';
 const SESSAO_SEGUNDOS = 21600;      // 6 horas (limite do CacheService)
 const LOTE_ENVIO = 15;              // mensagens por execução da fila
 const TRAVA_ESPERA_MS = 25000;
@@ -32,10 +32,10 @@ const ABAS = {
   LEADS: { nome: 'CRM_Leads', cols: ['id', 'nome', 'telefone', 'email', 'tipoCliente', 'servico', 'endereco', 'dataSolicitacao', 'origem', 'necessidade', 'valorEstimado', 'ultimoContato', 'proximoContato', 'proximoAuto', 'responsavelId', 'responsavelNome', 'status', 'consentimento', 'consentimentoOrigem', 'consentimentoData', 'bloqueado', 'motivoBloqueio', 'arquivado', 'anonimizado', 'encerradoEm', 'criadoEm', 'criadoPor', 'atualizadoEm'] },
   ORCAMENTOS: { nome: 'CRM_Orcamentos', cols: ['id', 'numero', 'leadId', 'itens', 'subtotal', 'desconto', 'total', 'condicoesPagamento', 'dataEnvio', 'validade', 'observacoes', 'status', 'geracao', 'encerradoEm', 'criadoEm', 'criadoPor', 'atualizadoEm'] },
   HISTORICO: { nome: 'CRM_Historico', cols: ['id', 'dataHora', 'usuarioId', 'usuarioNome', 'leadId', 'entidade', 'entidadeId', 'acao', 'detalhes'] },
-  FILA: { nome: 'CRM_Fila', cols: ['id', 'chave', 'leadId', 'orcamentoId', 'etapa', 'modeloId', 'telefone', 'agendadoPara', 'status', 'tentativas', 'ultimaTentativa', 'mensagemId', 'statusEntrega', 'erro', 'texto', 'modo', 'aprovadoPor', 'criadoEm', 'atualizadoEm'] },
-  MODELOS: { nome: 'CRM_Modelos', cols: ['id', 'nome', 'etapa', 'templateMeta', 'idioma', 'corpo', 'ativo', 'atualizadoEm'] },
+  FILA: { nome: 'CRM_Fila', cols: ['id', 'chave', 'leadId', 'orcamentoId', 'etapa', 'modeloId', 'telefone', 'agendadoPara', 'status', 'tentativas', 'ultimaTentativa', 'mensagemId', 'statusEntrega', 'erro', 'texto', 'modo', 'aprovadoPor', 'criadoEm', 'atualizadoEm', 'canal'] },
+  MODELOS: { nome: 'CRM_Modelos', cols: ['id', 'nome', 'etapa', 'templateMeta', 'idioma', 'corpo', 'ativo', 'atualizadoEm', 'assunto'] },
   CONFIG: { nome: 'CRM_Config', cols: ['chave', 'valor', 'descricao'] },
-  OPTOUT: { nome: 'CRM_OptOut', cols: ['telefone', 'motivo', 'origem', 'data', 'usuario'] }
+  OPTOUT: { nome: 'CRM_OptOut', cols: ['telefone', 'motivo', 'origem', 'data', 'usuario'] }  // "telefone" guarda telefone ou e-mail
 };
 
 const LISTAS = {
@@ -45,7 +45,7 @@ const LISTAS = {
   statusLead: ['Novo', 'Em contato', 'Orçamento enviado', 'Negociação', 'Ganho', 'Perdido'],
   statusOrcamento: ['Em preparação', 'Enviado', 'Aguardando resposta', 'Negociação', 'Aprovado', 'Recusado', 'Expirado'],
   tipoContato: ['Ligação', 'WhatsApp manual', 'E-mail', 'Visita', 'Observação'],
-  origemConsentimento: ['Formulário do site', 'Cliente iniciou conversa no WhatsApp', 'Ligação telefônica', 'Atendimento presencial', 'Outro'],
+  origemConsentimento: ['Formulário do site', 'Pedido de orçamento por e-mail', 'Cliente iniciou conversa no WhatsApp', 'Ligação telefônica', 'Atendimento presencial', 'Outro'],
   variaveis: ['NOME', 'NOME_COMPLETO', 'SERVICO', 'EMPRESA', 'ORCAMENTO', 'VENDEDOR']
 };
 
@@ -62,11 +62,20 @@ const ORC_ENCERRADOS = ['Aprovado', 'Recusado', 'Expirado'];
 const LEAD_ENCERRADOS = ['Ganho', 'Perdido'];
 const FILA_PENDENTES = ['AGUARDANDO_APROVACAO', 'PENDENTE'];
 const SISTEMA = { id: 'SISTEMA', nome: 'Sistema (automático)' };
+const EMAIL_SIS = { id: 'EMAIL', nome: 'E-mail (automático)' };
 const WHATSAPP = { id: 'WHATSAPP', nome: 'WhatsApp (automático)' };
 
 const CONFIG_PADRAO = [
   ['EMPRESA', 'Vegas Vigilância e Segurança', 'Nome da empresa usado nas mensagens'],
-  ['NUMERO_WHATSAPP', '5524998235101', 'Número do WhatsApp Business da empresa (somente informativo)'],
+  ['NUMERO_WHATSAPP', '5524998235101', 'WhatsApp da empresa usado no botão "Conversar no WhatsApp" do e-mail'],
+  ['TELEFONE_CONTATO', '5524998235101', 'Telefone usado no botão "Ligar" do e-mail'],
+  ['CANAL', 'EMAIL', 'Canal dos acompanhamentos automáticos: EMAIL ou WHATSAPP (API oficial)'],
+  ['EMAIL_REMETENTE', 'Vegas Vigilância e Segurança', 'Nome que aparece como remetente do e-mail'],
+  ['EMAIL_RESPONDER_PARA', '', 'E-mail que recebe as respostas (vazio = a própria conta Google)'],
+  ['EMAIL_IMG_TOPO', 'https://vegasvig.github.io/sdr/email-topo.jpg', 'Imagem do topo do e-mail (link https)'],
+  ['EMAIL_IMG_RODAPE', 'https://vegasvig.github.io/sdr/email-rodape.jpg', 'Imagem do rodapé do e-mail (link https)'],
+  ['MSG_WHATSAPP_CLIENTE', 'Olá! Recebi o orçamento [ORCAMENTO] de [SERVICO] e gostaria de conversar.', 'Mensagem que já vem escrita quando o cliente clica no botão do WhatsApp'],
+  ['DETECTAR_RESPOSTA_EMAIL', 'SIM', 'SIM = pausa os acompanhamentos quando o cliente responde o e-mail'],
   ['MODO_TESTE', 'SIM', 'SIM = simula os envios, nenhuma mensagem real sai'],
   ['ENVIOS_PAUSADOS', 'NAO', 'SIM = bloqueio geral imediato de todos os envios'],
   ['REQUER_APROVACAO', 'SIM', 'SIM = cada mensagem agendada espera aprovação do administrador'],
@@ -87,6 +96,12 @@ const CONFIG_PADRAO = [
   ['SEQ_ORCAMENTO', '0', 'Contador interno de orçamentos (não alterar)']
 ];
 
+const ASSUNTOS_PADRAO = {
+  1: '[NOME], conseguiu avaliar seu orçamento de [SERVICO]?',
+  2: 'Ainda tem interesse no projeto de [SERVICO]?',
+  3: '[NOME], deseja prosseguir com seu orçamento?'
+};
+
 const MODELOS_PADRAO = [
   ['Primeiro acompanhamento', 1, 'followup_orcamento_1', 'Olá, [NOME]! Tudo bem? Aqui é da [EMPRESA]. Estou entrando em contato para saber se você conseguiu avaliar o orçamento de [SERVICO] que solicitou. Se tiver alguma dúvida ou quiser ajustar a proposta, estou à disposição!'],
   ['Segundo acompanhamento', 2, 'followup_orcamento_2', 'Olá, [NOME]! Passando para saber se ainda tem interesse no projeto de [SERVICO]. Podemos conversar sobre as opções e encontrar uma solução que atenda à sua necessidade. Fico à disposição!'],
@@ -97,7 +112,7 @@ const ROTULOS_LEAD = {
   nome: 'Nome', telefone: 'Telefone', email: 'E-mail', tipoCliente: 'Tipo de cliente', servico: 'Serviço',
   endereco: 'Endereço/região', dataSolicitacao: 'Data da solicitação', origem: 'Origem', necessidade: 'Necessidade',
   valorEstimado: 'Valor estimado', proximoContato: 'Próximo contato', responsavelNome: 'Responsável', status: 'Status',
-  consentimento: 'Autorização WhatsApp', consentimentoOrigem: 'Origem da autorização'
+  consentimento: 'Autorização de contato', consentimentoOrigem: 'Origem da autorização'
 };
 
 /* ========================================================================== */
@@ -106,6 +121,7 @@ const ROTULOS_LEAD = {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  if (p.acao === 'sair') return paginaDescadastro_(p);
   if (p['hub.mode'] === 'subscribe') {
     const vt = PropertiesService.getScriptProperties().getProperty('WA_VERIFY_TOKEN');
     if (vt && p['hub.verify_token'] === vt) return ContentService.createTextOutput(String(p['hub.challenge'] || ''));
@@ -164,7 +180,10 @@ const ACOES = {
   salvarUsuario: { fn: salvarUsuario_, escrita: true, admin: true },
   anonimizarLead: { fn: anonimizarLead_, escrita: true, admin: true },
   listarOptOut: { fn: listarOptOut_, admin: true },
-  removerOptOut: { fn: removerOptOut_, escrita: true, admin: true }
+  removerOptOut: { fn: removerOptOut_, escrita: true, admin: true },
+  registrarWhatsAppManual: { fn: registrarWhatsAppManual_, escrita: true },
+  previaEmail: { fn: previaEmail_, admin: true },
+  enviarEmailTeste: { fn: enviarEmailTeste_, admin: true }
 };
 
 function rotear_(req) {
@@ -322,7 +341,7 @@ function definirConfig_(chave, valor) {
 
 function configPublica_() {
   const c = config_();
-  return { EMPRESA: c.EMPRESA, MODO_TESTE: c.MODO_TESTE, ENVIOS_PAUSADOS: c.ENVIOS_PAUSADOS, REQUER_APROVACAO: c.REQUER_APROVACAO, FUSO: c.FUSO, VALIDADE_PADRAO_DIAS: c.VALIDADE_PADRAO_DIAS };
+  return { EMPRESA: c.EMPRESA, CANAL: c.CANAL, MODO_TESTE: c.MODO_TESTE, ENVIOS_PAUSADOS: c.ENVIOS_PAUSADOS, REQUER_APROVACAO: c.REQUER_APROVACAO, FUSO: c.FUSO, VALIDADE_PADRAO_DIAS: c.VALIDADE_PADRAO_DIAS };
 }
 
 /* ---------------------------- Janela de envio ----------------------------- */
@@ -522,7 +541,8 @@ function obterLead_(d, u) {
   const mensagens = ler_(ABAS.FILA).filter(function (f) { return f.leadId === l.id; })
     .sort(function (a, b) { return a.agendadoPara < b.agendadoPara ? 1 : -1; })
     .map(function (f) { const x = Object.assign({}, f); delete x._row; return x; });
-  lead.optout = estaEmOptOut_(l.telefone) ? 'SIM' : 'NAO';
+  lead.optout = leadEmOptOut_(l) ? 'SIM' : 'NAO';
+  lead.textoWhatsApp = textoWhatsAppManual_(l, orcamentos, mensagens.filter(function (m) { return FILA_PENDENTES.indexOf(m.status) >= 0; }).reverse(), config_());
   return { lead: lead, orcamentos: orcamentos, historico: historico, mensagens: mensagens };
 }
 
@@ -567,7 +587,7 @@ function salvarLead_(d, u) {
   if (consentimento === 'SIM') {
     if (!consentimentoOrigem) throw erro_('Informe como o cliente autorizou receber mensagens pelo WhatsApp.');
     if (!atual || atual.consentimento !== 'SIM') {
-      if (estaEmOptOut_(telefone)) throw erro_('Este número pediu para não receber mensagens. Só um administrador pode retirá-lo dessa lista, e apenas se o próprio cliente pedir.');
+      if (estaEmOptOut_(telefone) || (email && estaEmOptOut_(email))) throw erro_('Este contato pediu para não receber mensagens. Só um administrador pode retirá-lo dessa lista, e apenas se o próprio cliente pedir.');
       consentimentoData = ymdOk_(d.consentimentoData) || hoje_(cfg);
     }
   }
@@ -729,6 +749,11 @@ function anonimizarLead_(d, u) {
 
 /* ---------------------------- Lista de não contatar ----------------------- */
 
+function leadEmOptOut_(lead, lista) {
+  lista = lista || ler_(ABAS.OPTOUT);
+  return estaEmOptOut_(lead.telefone, lista) || estaEmOptOut_(String(lead.email || '').toLowerCase(), lista);
+}
+
 function estaEmOptOut_(telefone, lista) {
   if (!telefone) return false;
   const h = 'h:' + hash_(telefone);
@@ -839,7 +864,7 @@ function reiniciarAcompanhamento_(d, u) {
   if (!orc) throw erro_('Orçamento não encontrado.');
   const lead = leadOuErro_(orc.leadId, u);
   if (ORC_ATIVOS_FOLLOWUP.indexOf(orc.status) < 0) throw erro_('Para reiniciar o acompanhamento, o orçamento precisa estar como "Enviado" ou "Aguardando resposta".');
-  const motivo = bloqueioEnvio_(lead, cfg);
+  const motivo = bloqueioEnvio_(lead, cfg, null, cfg.CANAL);
   if (motivo) throw erro_('Não é possível agendar: ' + motivo + '.');
   cancelarPendentes_({ orcamentoId: orc.id }, 'Sequência reiniciada', u);
   orc.geracao = String((parseInt(orc.geracao, 10) || 1) + 1);
@@ -855,14 +880,16 @@ function reiniciarAcompanhamento_(d, u) {
 /* ========================================================================== */
 
 /** Motivo pelo qual o lead não pode receber mensagens automáticas ('' = pode). */
-function bloqueioEnvio_(lead, cfg, listaOptOut) {
+function bloqueioEnvio_(lead, cfg, listaOptOut, canal) {
+  canal = canal || cfg.CANAL || 'EMAIL';
   if (lead.anonimizado === 'SIM') return 'dados anonimizados';
   if (lead.arquivado === 'SIM') return 'lead arquivado';
   if (lead.bloqueado === 'SIM') return 'envios bloqueados para este lead' + (lead.motivoBloqueio ? ' (' + lead.motivoBloqueio + ')' : '');
   if (lead.consentimento !== 'SIM') return 'cliente sem autorização registrada para receber mensagens';
   if (LEAD_ENCERRADOS.indexOf(lead.status) >= 0) return 'lead já encerrado (' + lead.status + ')';
-  if (!telefoneValido_(lead.telefone)) return 'telefone inválido';
-  if (estaEmOptOut_(lead.telefone, listaOptOut)) return 'número na lista de não contatar';
+  if (canal === 'EMAIL' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email || '')) return 'cliente sem e-mail cadastrado';
+  if (canal !== 'EMAIL' && !telefoneValido_(lead.telefone)) return 'telefone inválido';
+  if (leadEmOptOut_(lead, listaOptOut)) return 'contato na lista de não contatar';
   return '';
 }
 
@@ -901,7 +928,8 @@ function textoMeta_(corpo) {
 function agendarSequencia_(orc, lead, u, baseYmd) {
   const cfg = config_();
   if (ORC_ATIVOS_FOLLOWUP.indexOf(orc.status) < 0) return 0;
-  const motivo = bloqueioEnvio_(lead, cfg);
+  const canal = cfg.CANAL === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+  const motivo = bloqueioEnvio_(lead, cfg, null, canal);
   if (motivo) {
     registrar_(u, lead.id, 'FOLLOWUP', orc.id, 'Acompanhamento automático não agendado', motivo);
     return 0;
@@ -928,11 +956,11 @@ function agendarSequencia_(orc, lead, u, baseYmd) {
       telefone: lead.telefone, agendadoPara: quando.toISOString(),
       status: cfg.REQUER_APROVACAO === 'SIM' ? 'AGUARDANDO_APROVACAO' : 'PENDENTE',
       tentativas: '0', texto: renderizar_(mod.corpo, v), modo: cfg.MODO_TESTE === 'SIM' ? 'TESTE' : 'REAL',
-      criadoEm: agoraISO_(), atualizadoEm: agoraISO_()
+      criadoEm: agoraISO_(), atualizadoEm: agoraISO_(), canal: canal
     });
     agendadas.push(etapa + 'ª em ' + Utilities.formatDate(quando, cfg.FUSO, 'dd/MM HH:mm'));
   });
-  if (agendadas.length) registrar_(u, lead.id, 'FOLLOWUP', orc.id, 'Acompanhamento automático agendado', orc.numero + ': ' + agendadas.join(', ') + (cfg.REQUER_APROVACAO === 'SIM' ? ' (aguardando aprovação)' : ''));
+  if (agendadas.length) registrar_(u, lead.id, 'FOLLOWUP', orc.id, 'Acompanhamento automático agendado (' + (canal === 'EMAIL' ? 'e-mail' : 'WhatsApp') + ')', orc.numero + ': ' + agendadas.join(', ') + (cfg.REQUER_APROVACAO === 'SIM' ? ' (aguardando aprovação)' : ''));
   if (puladas.length) registrar_(u, lead.id, 'FOLLOWUP', orc.id, 'Etapas não agendadas', puladas.join('; '));
   recalcularProximo_(lead.id);
   return agendadas.length;
@@ -988,7 +1016,11 @@ function salvarModelo_(d, u) {
   const templateMeta = limpa_(d.templateMeta, 512);
   const idioma = limpa_(d.idioma, 10) || 'pt_BR';
   const corpo = limpa_(d.corpo, 1024);
+  const assunto = limpa_(d.assunto, 150);
   if (nome.length < 3) throw erro_('Dê um nome ao modelo.');
+  if (assunto.length < 3) throw erro_('Escreva o assunto do e-mail.');
+  const varsAssunto = (assunto.match(/\[([A-Z_]+)\]/g) || []).map(function (x) { return x.slice(1, -1); }).filter(function (k) { return LISTAS.variaveis.indexOf(k) < 0; });
+  if (varsAssunto.length) throw erro_('Variáveis desconhecidas no assunto: ' + varsAssunto.join(', '));
   if ([1, 2, 3].indexOf(etapa) < 0) throw erro_('A etapa precisa ser 1, 2 ou 3.');
   if (!/^[a-z0-9_]+$/.test(templateMeta)) throw erro_('O nome do modelo na Meta deve ter apenas letras minúsculas, números e "_" (ex.: followup_orcamento_1).');
   if (!/^[a-z]{2}(_[A-Z]{2})?$/.test(idioma)) throw erro_('Idioma inválido (use pt_BR).');
@@ -1001,7 +1033,7 @@ function salvarModelo_(d, u) {
   if (d.id && !m) throw erro_('Modelo não encontrado.');
   const novo = !m;
   m = m || { id: novoId_('M') };
-  Object.assign(m, { nome: nome, etapa: String(etapa), templateMeta: templateMeta, idioma: idioma, corpo: corpo, ativo: d.ativo === 'NAO' ? 'NAO' : 'SIM', atualizadoEm: agoraISO_() });
+  Object.assign(m, { nome: nome, etapa: String(etapa), templateMeta: templateMeta, idioma: idioma, corpo: corpo, assunto: assunto, ativo: d.ativo === 'NAO' ? 'NAO' : 'SIM', atualizadoEm: agoraISO_() });
   if (novo) inserir_(ABAS.MODELOS, m); else salvar_(ABAS.MODELOS, m);
   registrar_(u, '', 'MODELO', m.id, novo ? 'Modelo criado' : 'Modelo alterado', nome + ' (etapa ' + etapa + ', ' + templateMeta + ')' + (m.ativo === 'SIM' ? '' : ' — inativo'));
   return { id: m.id };
@@ -1031,7 +1063,8 @@ function listarFila_(d, u) {
       return {
         id: f.id, leadId: f.leadId, leadNome: l.nome, telefone: f.telefone, orcamentoNumero: o ? o.numero : '', etapa: f.etapa,
         agendadoPara: f.agendadoPara, status: f.status, tentativas: f.tentativas, ultimaTentativa: f.ultimaTentativa,
-        statusEntrega: f.statusEntrega, erro: f.erro, texto: f.texto, modo: f.modo, aprovadoPor: f.aprovadoPor, responsavelNome: l.responsavelNome
+        statusEntrega: f.statusEntrega, erro: f.erro, texto: f.texto, modo: f.modo, aprovadoPor: f.aprovadoPor, responsavelNome: l.responsavelNome,
+        canal: f.canal || 'WHATSAPP', email: l.email
       };
     })
   };
@@ -1095,6 +1128,10 @@ function processarFila_() {
   limparMemo_();
   const cfg = config_();
   const res = { enviados: 0, simulados: 0, falhas: 0, cancelados: 0, reagendados: 0, verificar: 0, mensagem: '' };
+  if (cfg.DETECTAR_RESPOSTA_EMAIL === 'SIM') {
+    try { res.respostasEmail = verificarRespostasEmail_(cfg); } catch (e) { console.error('Respostas por e-mail: ' + e); }
+    limparMemo_();
+  }
   if (cfg.ENVIOS_PAUSADOS === 'SIM') { res.mensagem = 'Envios pausados pelo bloqueio geral.'; return res; }
 
   // 1) Reserva as mensagens devidas (status ENVIANDO) sob trava — evita envio em dobro
@@ -1134,7 +1171,7 @@ function processarFila_() {
   ctx.modelos = ler_(ABAS.MODELOS).filter(function (m) { return m.ativo === 'SIM'; });
   ler_(ABAS.FILA).forEach(function (f) {
     if (['ENVIADO', 'SIMULADO'].indexOf(f.status) < 0) return;
-    (ctx.envios[f.telefone] = ctx.envios[f.telefone] || []).push(new Date(f.ultimaTentativa).getTime());
+    (ctx.envios[f.leadId] = ctx.envios[f.leadId] || []).push(new Date(f.ultimaTentativa).getTime());
     (ctx.usados[f.leadId] = ctx.usados[f.leadId] || {})[f.modeloId] = true;
   });
 
@@ -1144,7 +1181,7 @@ function processarFila_() {
     try { r = tentarEnviar_(f, ctx, cfg); }
     catch (e) { r = { tipo: 'verificar', campos: { status: 'VERIFICAR', erro: 'Erro inesperado: ' + e.message } }; }
     if (r.tipo === 'enviado' || r.tipo === 'simulado') {
-      (ctx.envios[f.telefone] = ctx.envios[f.telefone] || []).push(Date.now());
+      (ctx.envios[f.leadId] = ctx.envios[f.leadId] || []).push(Date.now());
       (ctx.usados[f.leadId] = ctx.usados[f.leadId] || {})[r.campos.modeloId] = true;
     }
     comTrava_(function () { gravarResultado_(f, r); });
@@ -1159,12 +1196,13 @@ function tentarEnviar_(f, ctx, cfg) {
   const lead = ctx.leads[f.leadId];
   const orc = ctx.orcs[f.orcamentoId];
   if (!lead) return cancelar('Lead não encontrado');
-  const bloq = bloqueioEnvio_(lead, cfg, ctx.optout);
+  const canal = f.canal === 'EMAIL' ? 'EMAIL' : 'WHATSAPP';
+  const bloq = bloqueioEnvio_(lead, cfg, ctx.optout, canal);
   if (bloq) return cancelar('Não enviado: ' + bloq);
   if (!orc || ORC_ATIVOS_FOLLOWUP.indexOf(orc.status) < 0) return cancelar('Orçamento não está mais aguardando resposta');
 
   const agora = Date.now();
-  const envios = ctx.envios[lead.telefone] || [];
+  const envios = ctx.envios[lead.id] || [];
   const limite = parseInt(cfg.MAX_MSG_30_DIAS, 10) || 3;
   if (envios.filter(function (t) { return agora - t < 30 * 864e5; }).length >= limite) return cancelar('Limite de ' + limite + ' mensagens automáticas em 30 dias atingido');
   const minHoras = parseFloat(cfg.MIN_HORAS_ENTRE_MSG) || 0;
@@ -1187,6 +1225,28 @@ function tentarEnviar_(f, ctx, cfg) {
 
   if (cfg.MODO_TESTE === 'SIM') {
     return { tipo: 'simulado', campos: { status: 'SIMULADO', modeloId: mod.id, texto: texto, modo: 'TESTE', mensagemId: 'TESTE-' + f.id, erro: '', statusEntrega: 'simulado' } };
+  }
+
+  if (canal === 'EMAIL') {
+    let restante = 1;
+    try { restante = MailApp.getRemainingDailyQuota(); } catch (e) { restante = 1; }
+    if (restante < 1) {
+      const amanha = proximaJanela_(Utilities.parseDate(somarDias_(hoje_(cfg), 1) + ' ' + cfg.HORA_INICIO, cfg.FUSO, 'yyyy-MM-dd HH:mm'), cfg);
+      return { tipo: 'reagendado', campos: { status: 'PENDENTE', agendadoPara: amanha.toISOString(), tentativas: '0', erro: 'Limite diário de e-mails do Google atingido; reagendado para o próximo dia útil' } };
+    }
+    try {
+      const em = montarEmail_(lead, orc, mod, cfg, true);
+      GmailApp.sendEmail(lead.email, em.assunto, em.texto, em.opcoes);
+    } catch (e) {
+      const m = String(e.message || e);
+      if (/too many times|limit|quota|limite/i.test(m)) {
+        const q = proximaJanela_(new Date(Date.now() + 60 * 60000), cfg);
+        return { tipo: 'reagendado', campos: { status: 'PENDENTE', agendadoPara: q.toISOString(), erro: 'Limite do Google: ' + m } };
+      }
+      if (/invalid email|endereço inválido|Invalid argument/i.test(m)) return { tipo: 'falha', campos: { status: 'FALHA', modeloId: mod.id, texto: texto, erro: 'E-mail inválido: ' + m } };
+      return { tipo: 'verificar', campos: { status: 'VERIFICAR', modeloId: mod.id, texto: texto, erro: 'Erro ao enviar o e-mail sem confirmação (' + m + '). Confira na pasta Enviados do Gmail antes de reenviar.' } };
+    }
+    return { tipo: 'enviado', campos: { status: 'ENVIADO', modeloId: mod.id, texto: texto, modo: 'REAL', mensagemId: 'EMAIL-' + f.id, erro: '', statusEntrega: 'sent' } };
   }
 
   const props = PropertiesService.getScriptProperties();
@@ -1236,7 +1296,7 @@ function gravarResultado_(f, r) {
   Object.assign(atual, r.campos, { atualizadoEm: agoraISO_() });
   salvar_(ABAS.FILA, atual);
   const lead = ler_(ABAS.LEADS).find(function (l) { return l.id === f.leadId; });
-  const rotulo = { enviado: 'Mensagem enviada pelo WhatsApp', simulado: 'Mensagem simulada (modo teste)', falha: 'Falha no envio', cancelado: 'Envio cancelado', reagendado: 'Envio reagendado', verificar: 'Envio precisa de verificação' }[r.tipo];
+  const rotulo = { enviado: f.canal === 'EMAIL' ? 'E-mail de acompanhamento enviado' : 'Mensagem enviada pelo WhatsApp', simulado: 'Mensagem simulada (modo teste)', falha: 'Falha no envio', cancelado: 'Envio cancelado', reagendado: 'Envio reagendado', verificar: 'Envio precisa de verificação' }[r.tipo];
   const detalhe = 'Etapa ' + f.etapa + (r.campos.texto ? ' — "' + r.campos.texto + '"' : '') + (r.campos.erro ? ' — ' + r.campos.erro : '');
   registrar_(SISTEMA, f.leadId, 'MENSAGEM', f.id, rotulo, detalhe);
   if (lead && (r.tipo === 'enviado' || r.tipo === 'simulado')) {
@@ -1385,10 +1445,279 @@ function dashboard_(d, u) {
         id: l.id, nome: l.nome, telefone: l.telefone, servico: l.servico, ultimoContato: l.ultimoContato,
         proximoContato: l.proximoContato, responsavelNome: l.responsavelNome, status: l.status,
         atrasado: l.proximoContato < hoje, hoje: l.proximoContato === hoje,
-        acao: acaoRecomendada_(l, orcPorLead[l.id] || [], pendPorLead[l.id] || [], hoje, cfg)
+        acao: acaoRecomendada_(l, orcPorLead[l.id] || [], pendPorLead[l.id] || [], hoje, cfg),
+        textoWhatsApp: textoWhatsAppManual_(l, orcPorLead[l.id] || [], pendPorLead[l.id] || [], cfg)
       };
     });
   return { periodo: { de: de, ate: ate }, hoje: hoje, kpis: kpis, fila: filaContagem, porStatus: porStatus, proximos: proximos, config: configPublica_() };
+}
+
+/* ========================================================================== */
+/* E-MAIL: montagem, envio, descadastro e detecção de respostas               */
+/* ========================================================================== */
+
+const _imgCache = {};
+
+function formatarTelefone_(d) {
+  d = String(d || '').replace(/\D/g, '');
+  if (d.length === 13 && d.indexOf('55') === 0) return '(' + d.slice(2, 4) + ') ' + d.slice(4, 9) + '-' + d.slice(9);
+  if (d.length === 12 && d.indexOf('55') === 0) return '(' + d.slice(2, 4) + ') ' + d.slice(4, 8) + '-' + d.slice(8);
+  return d ? '+' + d : '';
+}
+
+function escHtml_(s) {
+  return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function moedaBR_(n) {
+  return 'R$ ' + dinheiro_(n).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function imagemBlob_(url, nome) {
+  if (!url) return null;
+  if (_imgCache[url] !== undefined) return _imgCache[url];
+  let blob = null;
+  try {
+    const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+    if (r.getResponseCode() === 200) blob = r.getBlob().setName(nome);
+  } catch (e) { blob = null; }
+  _imgCache[url] = blob;
+  return blob;
+}
+
+function assinaturaLead_(id) {
+  const segredo = PropertiesService.getScriptProperties().getProperty('EMAIL_SEGREDO') || '';
+  return hash_(segredo + '|' + id).slice(0, 32);
+}
+
+function linkDescadastro_(lead) {
+  let base = '';
+  try { base = ScriptApp.getService().getUrl() || ''; } catch (e) { base = ''; }
+  if (!base) return '';
+  return base + '?acao=sair&l=' + encodeURIComponent(lead.id) + '&t=' + assinaturaLead_(lead.id);
+}
+
+/** Monta o e-mail de acompanhamento com a identidade visual da Vegas. */
+function montarEmail_(lead, orc, mod, cfg, embutirImagens) {
+  const v = variaveis_(lead, orc, cfg);
+  const assunto = renderizar_(mod.assunto || ASSUNTOS_PADRAO[mod.etapa] || 'Seu orçamento de [SERVICO]', v);
+  const corpo = renderizar_(mod.corpo, v);
+  const wa = normalizarTelefone_(cfg.NUMERO_WHATSAPP);
+  const fone = normalizarTelefone_(cfg.TELEFONE_CONTATO || cfg.NUMERO_WHATSAPP);
+  const msgWa = renderizar_(cfg.MSG_WHATSAPP_CLIENTE || '', v);
+  const linkWa = 'https://wa.me/' + wa + (msgWa ? '?text=' + encodeURIComponent(msgWa) : '');
+  const linkTel = 'tel:+' + fone;
+  const foneFmt = formatarTelefone_(fone);
+  const sair = linkDescadastro_(lead);
+  const empresa = cfg.EMPRESA || 'Vegas Vigilância e Segurança';
+
+  const imagens = {};
+  let srcTopo = cfg.EMAIL_IMG_TOPO, srcRodape = cfg.EMAIL_IMG_RODAPE;
+  if (embutirImagens) {
+    const bt = imagemBlob_(srcTopo, 'vegas-topo.jpg');
+    if (bt) { imagens.vegastopo = bt; srcTopo = 'cid:vegastopo'; }
+    const br = imagemBlob_(srcRodape, 'vegas-rodape.jpg');
+    if (br) { imagens.vegasrodape = br; srcRodape = 'cid:vegasrodape'; }
+  }
+
+  // Separa a saudação ("Olá, Maria!") para virar o título do e-mail
+  let titulo = '', texto = corpo.trim();
+  const m = texto.match(/^((?:Olá|Ola|Oi|Bom dia|Boa tarde|Boa noite)[^!?.\n]{0,60}[!?.])\s*/i);
+  if (m) { titulo = m[1]; texto = texto.slice(m[0].length); }
+  const fonte = "font-family:Arial,Helvetica,sans-serif;";
+  const paragrafos = texto.split(/\n+/).filter(function (p) { return p.trim(); }).map(function (p) {
+    return '<p style="margin:0 0 16px;' + fonte + 'font-size:16px;line-height:26px;color:#d9d9d9;">' + escHtml_(p) + '</p>';
+  }).join('');
+
+  let cartao = '';
+  if (orc && orc.numero) {
+    const linhaCartao = function (rot, val, destaque) {
+      return '<tr><td style="padding:6px 0;' + fonte + 'font-size:13px;color:#9a9a9a;">' + rot + '</td>' +
+        '<td align="right" style="padding:6px 0;text-align:right;' + fonte + 'font-size:' + (destaque ? '20px' : '14px') + ';font-weight:700;color:' + (destaque ? '#ffffff' : '#e6e6e6') + ';">' + val + '</td></tr>';
+    };
+    cartao = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:8px 0 24px;background:#141414;border:1px solid #333333;border-top:3px solid #c8c8c8;">' +
+      '<tr><td style="padding:16px 20px 12px;">' +
+      '<p style="margin:0 0 8px;' + fonte + 'font-size:11px;letter-spacing:3px;color:#a8a8a8;">SEU ORÇAMENTO</p>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">' +
+      linhaCartao('Número', escHtml_(orc.numero)) +
+      linhaCartao('Serviço', escHtml_(lead.servico)) +
+      (num_(orc.total) ? linhaCartao('Valor total', escHtml_(moedaBR_(orc.total)), true) : '') +
+      (orc.validade ? linhaCartao('Válido até', escHtml_(br_(orc.validade))) : '') +
+      '</table></td></tr></table>';
+  }
+
+  const botao = function (href, rotulo, fundo, cor) {
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 12px;"><tr>' +
+      '<td align="center" bgcolor="' + fundo + '" style="background:' + fundo + ';border-radius:6px;text-align:center;">' +
+      '<a href="' + escHtml_(href) + '" target="_blank" style="display:block;text-align:center;padding:16px 20px;' + fonte + 'font-size:17px;font-weight:700;color:' + cor + ';text-decoration:none;border-radius:6px;">' + rotulo + '</a>' +
+      '</td></tr></table>';
+  };
+
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>' + escHtml_(assunto) + '</title></head>' +
+    '<body style="margin:0;padding:0;background:#050505;">' +
+    '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#050505;">' + escHtml_(texto.slice(0, 110)) + '</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="background:#050505;"><tr><td align="center" style="padding:20px 10px;">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0b0b" style="width:100%;max-width:600px;background:#0b0b0b;border:1px solid #262626;">' +
+    // topo
+    '<tr><td style="padding:0;line-height:0;font-size:0;"><img src="' + escHtml_(srcTopo) + '" width="600" alt="' + escHtml_(empresa) + ' — Sua segurança é o nosso compromisso" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></td></tr>' +
+    // corpo com a linha prateada à esquerda, como no template
+    '<tr><td style="padding:30px 28px 8px 28px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;"><tr><td style="border-left:2px solid #a6a6a6;padding:2px 0 2px 22px;">' +
+    (titulo ? '<h1 style="margin:0 0 14px;' + fonte + 'font-size:28px;line-height:34px;font-weight:800;color:#ffffff;">' + escHtml_(titulo) + '</h1>' : '') +
+    paragrafos + cartao +
+    '<p style="margin:0 0 14px;' + fonte + 'font-size:14px;line-height:22px;color:#a8a8a8;">Fale direto com a nossa equipe:</p>' +
+    botao(linkWa, '&#128172;&nbsp; Conversar no WhatsApp', '#25D366', '#06240f') +
+    botao(linkTel, '&#128222;&nbsp; Ligar: ' + escHtml_(foneFmt), '#e6e6e6', '#0b0b0b') +
+    '<p style="margin:22px 0 4px;' + fonte + 'font-size:15px;line-height:22px;color:#bdbdbd;">Atenciosamente,</p>' +
+    '<p style="margin:0 0 6px;' + fonte + 'font-size:16px;line-height:22px;color:#ffffff;font-weight:700;">' + escHtml_(lead.responsavelNome || empresa) + '</p>' +
+    '<p style="margin:0;' + fonte + 'font-size:13px;line-height:20px;color:#9a9a9a;">' + escHtml_(empresa) + '<br>WhatsApp ' + escHtml_(formatarTelefone_(wa)) + '</p>' +
+    '</td></tr></table></td></tr>' +
+    // rodapé
+    '<tr><td style="padding:24px 0 0;line-height:0;font-size:0;"><img src="' + escHtml_(srcRodape) + '" width="600" alt="Monitoramento 24 horas · Vigilância patrimonial · Sistemas de segurança — Juntos por mais segurança!" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></td></tr>' +
+    '<tr><td style="padding:14px 28px 22px;' + fonte + 'font-size:11px;line-height:17px;color:#7a7a7a;" align="center">' +
+    'Você está recebendo este e-mail porque solicitou um orçamento à ' + escHtml_(empresa) + '.' +
+    (sair ? '<br>Não quer mais receber estes e-mails? <a href="' + escHtml_(sair) + '" target="_blank" style="color:#bdbdbd;text-decoration:underline;">Clique aqui para cancelar</a>.' : '') +
+    '</td></tr></table></td></tr></table></body></html>';
+
+  const textoSimples = corpo + '\n\n' +
+    (orc && orc.numero ? 'Orçamento ' + orc.numero + (num_(orc.total) ? ' — ' + moedaBR_(orc.total) : '') + (orc.validade ? ' — válido até ' + br_(orc.validade) : '') + '\n\n' : '') +
+    'Conversar no WhatsApp: ' + linkWa + '\nLigar: ' + foneFmt + '\n\nAtenciosamente,\n' + (lead.responsavelNome || empresa) + '\n' + empresa +
+    (sair ? '\n\nPara não receber mais estes e-mails: ' + sair : '');
+
+  const opcoes = { htmlBody: html, name: cfg.EMAIL_REMETENTE || empresa };
+  if (Object.keys(imagens).length) opcoes.inlineImages = imagens;
+  if (cfg.EMAIL_RESPONDER_PARA) opcoes.replyTo = cfg.EMAIL_RESPONDER_PARA;
+  return { assunto: assunto, html: html, texto: textoSimples, opcoes: opcoes };
+}
+
+function exemploEmail_(u, cfg, para) {
+  const hoje = hoje_(cfg);
+  return {
+    lead: { id: 'EXEMPLO', nome: 'Maria da Silva', email: para || 'cliente@exemplo.com', servico: 'Câmeras de segurança', responsavelNome: u.nome },
+    orc: { numero: 'ORC-' + hoje.slice(0, 4) + '-0001', total: '2300', validade: somarDias_(hoje, 15) }
+  };
+}
+
+function modeloParaEmail_(d) {
+  const modelos = ler_(ABAS.MODELOS);
+  if (d.corpo) return { corpo: limpa_(d.corpo, 1024), assunto: limpa_(d.assunto, 150), etapa: String(d.etapa || 1) };
+  const m = (d.modeloId && modelos.find(function (x) { return x.id === d.modeloId; })) ||
+    modelos.find(function (x) { return x.ativo === 'SIM' && String(x.etapa) === '1'; }) || modelos[0];
+  if (!m) throw erro_('Nenhum modelo de mensagem cadastrado.');
+  return m;
+}
+
+function previaEmail_(d, u) {
+  const cfg = config_();
+  const ex = exemploEmail_(u, cfg);
+  const em = montarEmail_(ex.lead, ex.orc, modeloParaEmail_(d), cfg, false);
+  return { assunto: em.assunto, html: em.html };
+}
+
+function enviarEmailTeste_(d, u) {
+  const cfg = config_();
+  let para = limpa_(d.para, 120).toLowerCase();
+  if (!para) { try { para = Session.getEffectiveUser().getEmail(); } catch (e) { para = ''; } }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) throw erro_('Informe um e-mail válido para receber o teste.');
+  const ex = exemploEmail_(u, cfg, para);
+  const em = montarEmail_(ex.lead, ex.orc, modeloParaEmail_(d), cfg, true);
+  GmailApp.sendEmail(para, '[TESTE] ' + em.assunto, em.texto, em.opcoes);
+  comTrava_(function () { registrar_(u, '', 'CONFIG', '', 'E-mail de teste enviado', para); });
+  return { para: para, imagensEmbutidas: !!em.opcoes.inlineImages };
+}
+
+function paginaDescadastro_(p) {
+  const cfg = config_();
+  const empresa = cfg.EMPRESA || 'Vegas Vigilância e Segurança';
+  const pagina = function (titulo, msg, extra) {
+    return HtmlService.createHtmlOutput('<!DOCTYPE html><html lang="pt-BR"><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<style>body{margin:0;background:#0b0b0b;color:#d9d9d9;font-family:Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}' +
+      'main{max-width:460px;border-left:2px solid #a6a6a6;padding:6px 0 6px 22px}small{letter-spacing:3px;color:#9a9a9a;font-size:11px}h1{color:#fff;font-size:26px;margin:10px 0}' +
+      'a{display:inline-block;margin-top:14px;background:#e6e6e6;color:#0b0b0b;padding:13px 20px;border-radius:6px;text-decoration:none;font-weight:700}</style></head>' +
+      '<body><main><small>' + escHtml_(empresa.toUpperCase()) + '</small><h1>' + titulo + '</h1><p>' + msg + '</p>' + (extra || '') + '</main></body></html>')
+      .setTitle(empresa).addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  };
+  const id = String(p.l || ''), t = String(p.t || '');
+  if (!id || t !== assinaturaLead_(id)) return pagina('Link inválido', 'Este link de cancelamento não é válido. Se preferir, responda o e-mail pedindo para não receber mais mensagens.');
+  if (p.ok !== '1') {
+    let base = '';
+    try { base = ScriptApp.getService().getUrl() || ''; } catch (e) { base = ''; }
+    const confirmar = base + '?acao=sair&l=' + encodeURIComponent(id) + '&t=' + t + '&ok=1';
+    return pagina('Cancelar o recebimento?', 'Você não vai mais receber e-mails de acompanhamento do seu orçamento.', '<a href="' + escHtml_(confirmar) + '" target="_top">Confirmar cancelamento</a>');
+  }
+  comTrava_(function () {
+    const l = ler_(ABAS.LEADS).find(function (x) { return x.id === id; });
+    if (!l || l.anonimizado === 'SIM' || l.bloqueado === 'SIM' && l.consentimento === 'NAO' && leadEmOptOut_(l)) return;
+    if (l.email) adicionarOptOut_(l.email, 'Cancelou pelo link do e-mail', 'E-mail', EMAIL_SIS);
+    if (l.telefone) adicionarOptOut_(l.telefone, 'Cancelou pelo link do e-mail', 'E-mail', EMAIL_SIS);
+    l.consentimento = 'NAO'; l.bloqueado = 'SIM'; l.motivoBloqueio = 'Cancelou o recebimento pelo link do e-mail'; l.atualizadoEm = agoraISO_();
+    salvar_(ABAS.LEADS, l);
+    cancelarPendentes_({ leadId: l.id }, 'Cliente cancelou o recebimento pelo link do e-mail', EMAIL_SIS);
+    registrar_(EMAIL_SIS, l.id, 'LEAD', l.id, 'Incluído na lista de não contatar', 'O cliente clicou em cancelar no e-mail');
+  });
+  return pagina('Pronto!', 'Você não receberá mais e-mails de acompanhamento. Se quiser retomar o orçamento, é só falar com a gente.');
+}
+
+/** Pausa os acompanhamentos dos clientes que responderam algum e-mail. */
+function verificarRespostasEmail_(cfg) {
+  const fila = ler_(ABAS.FILA);
+  const primeiroEnvio = {}, comPendente = {};
+  fila.forEach(function (f) {
+    if (f.canal === 'EMAIL' && f.status === 'ENVIADO' && f.modo === 'REAL' && f.ultimaTentativa) {
+      if (!primeiroEnvio[f.leadId] || f.ultimaTentativa < primeiroEnvio[f.leadId]) primeiroEnvio[f.leadId] = f.ultimaTentativa;
+    }
+    if (FILA_PENDENTES.indexOf(f.status) >= 0) comPendente[f.leadId] = true;
+  });
+  const alvos = ler_(ABAS.LEADS).filter(function (l) { return comPendente[l.id] && primeiroEnvio[l.id] && l.email; }).slice(0, 25);
+  let n = 0;
+  alvos.forEach(function (l) {
+    const desde = new Date(primeiroEnvio[l.id]);
+    const busca = 'from:' + l.email + ' after:' + Utilities.formatDate(new Date(desde.getTime() - 864e5), cfg.FUSO, 'yyyy/MM/dd');
+    const respondeu = GmailApp.search(busca, 0, 5).some(function (th) {
+      return th.getMessages().some(function (m) {
+        return m.getDate().getTime() > desde.getTime() && String(m.getFrom()).toLowerCase().indexOf(l.email) >= 0;
+      });
+    });
+    if (respondeu) {
+      comTrava_(function () {
+        const atual = ler_(ABAS.LEADS).find(function (x) { return x.id === l.id; });
+        if (atual) clienteRespondeuInterno_(atual, EMAIL_SIS, 'Resposta recebida por e-mail');
+      });
+      n++;
+    }
+  });
+  return n;
+}
+
+/* ---------------------------- WhatsApp manual (1 clique) ------------------ */
+
+function textoWhatsAppManual_(l, orcs, pend, cfg) {
+  const recentes = orcs.slice().sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; });
+  const orc = recentes.find(function (o) { return ORC_ABERTOS.indexOf(o.status) >= 0; }) || null;
+  if (!orc) {
+    return renderizar_('Olá, [NOME]! Aqui é [VENDEDOR], da [EMPRESA]. Recebemos seu pedido sobre [SERVICO] e gostaria de entender melhor a sua necessidade para preparar a melhor proposta. Podemos conversar?', variaveis_(l, null, cfg));
+  }
+  if (orc.status === 'Negociação') {
+    return renderizar_('Olá, [NOME]! Aqui é [VENDEDOR], da [EMPRESA]. Estou retomando nossa conversa sobre o orçamento [ORCAMENTO] de [SERVICO]. Conseguimos avançar?', variaveis_(l, orc, cfg));
+  }
+  const etapa = pend.length ? String(pend[0].etapa) : '1';
+  const modelos = ler_(ABAS.MODELOS).filter(function (m) { return m.ativo === 'SIM'; });
+  const mod = modelos.find(function (m) { return String(m.etapa) === etapa; }) || modelos[0];
+  return mod ? renderizar_(mod.corpo, variaveis_(l, orc, cfg)) : '';
+}
+
+function registrarWhatsAppManual_(d, u) {
+  const cfg = config_();
+  const l = leadOuErro_(d.leadId, u);
+  l.ultimoContato = hoje_(cfg);
+  if (l.status === 'Novo') { l.status = 'Em contato'; registrar_(u, l.id, 'LEAD', l.id, 'Status alterado', 'Novo → Em contato'); }
+  l.atualizadoEm = agoraISO_();
+  salvar_(ABAS.LEADS, l);
+  registrar_(u, l.id, 'CONTATO', '', 'WhatsApp manual (aberto pelo CRM)', limpa_(d.texto, 1000));
+  return true;
 }
 
 /* ========================================================================== */
@@ -1440,7 +1769,12 @@ function salvarConfig_(d, u) {
     if (!(n >= x[1] && n <= x[2])) throw erro_(x[0] + ' deve ficar entre ' + x[1] + ' e ' + x[2] + '.');
   });
   if (!/^v\d+\.\d+$/.test(final.GRAPH_VERSAO)) throw erro_('Versão da Graph API inválida (ex.: v23.0).');
-  if (final.MODO_TESTE === 'NAO') {
+  if (['EMAIL', 'WHATSAPP'].indexOf(final.CANAL) < 0) throw erro_('Canal inválido: use EMAIL ou WHATSAPP.');
+  ['EMAIL_IMG_TOPO', 'EMAIL_IMG_RODAPE'].forEach(function (k) { if (final[k] && !/^https:\/\//.test(final[k])) throw erro_('O link da imagem precisa começar com https://'); });
+  if (final.EMAIL_RESPONDER_PARA && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(final.EMAIL_RESPONDER_PARA)) throw erro_('E-mail para respostas inválido.');
+  ['NUMERO_WHATSAPP', 'TELEFONE_CONTATO'].forEach(function (k) { final[k] = normalizarTelefone_(final[k]); if (novo[k] !== undefined) novo[k] = final[k]; if (!telefoneValido_(final[k])) throw erro_('Telefone inválido em ' + k + '.'); });
+  ['DETECTAR_RESPOSTA_EMAIL'].forEach(function (k) { if (['SIM', 'NAO'].indexOf(final[k]) < 0) throw erro_(k + ' deve ser SIM ou NAO.'); });
+  if (final.MODO_TESTE === 'NAO' && final.CANAL === 'WHATSAPP') {
     const p = PropertiesService.getScriptProperties();
     if (!p.getProperty('WA_TOKEN') || !p.getProperty('WA_PHONE_NUMBER_ID')) throw erro_('Configure e teste as credenciais do WhatsApp antes de desligar o modo teste.');
   }
@@ -1526,9 +1860,12 @@ function instalar() {
 
   if (!ler_(ABAS.MODELOS).length) {
     MODELOS_PADRAO.forEach(function (m) {
-      inserir_(ABAS.MODELOS, { id: novoId_('M'), nome: m[0], etapa: String(m[1]), templateMeta: m[2], idioma: 'pt_BR', corpo: m[3], ativo: 'SIM', atualizadoEm: agoraISO_() });
+      inserir_(ABAS.MODELOS, { id: novoId_('M'), nome: m[0], etapa: String(m[1]), templateMeta: m[2], idioma: 'pt_BR', corpo: m[3], ativo: 'SIM', atualizadoEm: agoraISO_(), assunto: ASSUNTOS_PADRAO[m[1]] });
     });
   }
+  ler_(ABAS.MODELOS).forEach(function (m) {
+    if (!m.assunto) { m.assunto = ASSUNTOS_PADRAO[m.etapa] || 'Seu orçamento de [SERVICO]'; salvar_(ABAS.MODELOS, m); }
+  });
 
   let senhaInicial = '';
   if (!ler_(ABAS.USUARIOS).length) {
@@ -1541,6 +1878,7 @@ function instalar() {
 
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('WA_VERIFY_TOKEN')) props.setProperty('WA_VERIFY_TOKEN', Utilities.getUuid().replace(/-/g, ''));
+  if (!props.getProperty('EMAIL_SEGREDO')) props.setProperty('EMAIL_SEGREDO', Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, ''));
   instalarGatilho_();
   registrar_(SISTEMA, '', 'SISTEMA', '', 'Instalação executada', 'Versão ' + VERSAO);
   SpreadsheetApp.flush();
